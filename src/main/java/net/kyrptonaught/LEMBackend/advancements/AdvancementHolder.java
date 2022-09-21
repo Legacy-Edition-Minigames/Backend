@@ -7,33 +7,76 @@ import com.google.gson.JsonSerializer;
 
 import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AdvancementHolder {
-    HashMap<String, JsonElement> advancements = new HashMap<>();
+    private final ConcurrentHashMap<String, Advancement> advancements = new ConcurrentHashMap<>();
 
-    int DataVersion;
+    private int DataVersion;
 
     public void setDataVersion(int version) {
         this.DataVersion = version;
     }
 
-    public void addAdvancement(String name, JsonElement obj) {
-        advancements.put(name, obj);
+    public void removeAdvancement(String advancement, String criteria) {
+        if (advancements.containsKey(advancement)) {
+            advancements.get(advancement).criteria.remove("criteria");
+            advancements.get(advancement).done = false;
+            if (advancements.get(advancement).criteria.size() == 0)
+                advancements.remove(advancement);
+        }
     }
 
-    public void removeAdvancement(String name) {
-        advancements.remove(name);
+    public void addAdvancementCriteria(String advancementKey, JsonObject advancementJson, boolean forceDone) {
+        if (advancements.get(advancementKey) == null)
+            advancements.put(advancementKey, new Advancement());
+        Advancement advancement = advancements.get(advancementKey);
+        for (Map.Entry<String, JsonElement> entry : advancementJson.getAsJsonObject("criteria").entrySet()) {
+            advancement.addCriteria(entry.getKey(), entry.getValue().getAsString());
+        }
+        if (forceDone || advancementJson.get("done").getAsBoolean())
+            advancement.done = advancementJson.get("done").getAsBoolean();
     }
 
-    public void mergeAdvancements(AdvancementHolder other) {
-        other.advancements.forEach(this::addAdvancement);
+    public static class Advancement {
+        final ConcurrentHashMap<String, String> criteria = new ConcurrentHashMap<>();
+        boolean done;
+
+        public void addCriteria(String criteria, String unlocked) {
+            this.criteria.put(criteria, unlocked);
+        }
     }
 
     public static class Serializer implements JsonSerializer<AdvancementHolder> {
         @Override
         public JsonElement serialize(AdvancementHolder src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject object = new JsonObject();
-            src.advancements.forEach(object::add);
+
+            for (String advancementKey : src.advancements.keySet()) {
+                Advancement advancement = src.advancements.get(advancementKey);
+                JsonObject advancementJson = new JsonObject();
+                JsonObject criteriaJson = new JsonObject();
+                for (String criteria : advancement.criteria.keySet()) {
+                    criteriaJson.addProperty(criteria, advancement.criteria.get(criteria));
+                }
+
+                advancementJson.add("criteria", criteriaJson);
+                advancementJson.addProperty("done", advancement.done);
+                object.add(advancementKey, advancementJson);
+            }
+
+            if (src.advancements.size() == 0) {
+                JsonObject advancementJson = new JsonObject();
+                JsonObject criteriaJson = new JsonObject();
+
+                criteriaJson.addProperty("requirement", "2022-07-02 23:25:14 -0400");
+
+                advancementJson.add("criteria", criteriaJson);
+                advancementJson.addProperty("done", true);
+                object.add("serverutils:dummy", advancementJson);
+            }
+
             object.addProperty("DataVersion", src.DataVersion);
             return object;
         }
@@ -41,7 +84,10 @@ public class AdvancementHolder {
         public static AdvancementHolder deserialize(JsonObject object) {
             AdvancementHolder advancementHolder = new AdvancementHolder();
             advancementHolder.setDataVersion(object.remove("DataVersion").getAsInt());
-            object.entrySet().forEach(entry -> advancementHolder.addAdvancement(entry.getKey(), entry.getValue()));
+            for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
+                advancementHolder.addAdvancementCriteria(entry.getKey(), entry.getValue().getAsJsonObject(), true);
+            }
+
             return advancementHolder;
         }
     }

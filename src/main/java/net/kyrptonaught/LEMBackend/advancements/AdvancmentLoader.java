@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -13,9 +14,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AdvancmentLoader {
-    public static HashMap<String, AdvancementHolder> advancementHolderCache = new HashMap<>();
+    public static final ConcurrentHashMap<String, AdvancementHolder> advancementHolderCache = new ConcurrentHashMap<>();
     private static final Path dir = Paths.get("data/advancements");
 
     public static AdvancementHolder getAdvancementsFor(String player) {
@@ -23,9 +25,10 @@ public class AdvancmentLoader {
             return advancementHolderCache.get(player);
 
         AdvancementHolder advancementHolder = loadFromFile(player);
-        if (advancementHolder != null)
-            advancementHolderCache.put(player, advancementHolder);
+        if (advancementHolder == null)
+            advancementHolder = new AdvancementHolder();
 
+        advancementHolderCache.put(player, advancementHolder);
         return advancementHolder;
     }
 
@@ -68,6 +71,11 @@ public class AdvancmentLoader {
     }
 
     private static void save(String player, AdvancementHolder advancementHolder, Gson gson) {
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         Path saveFile = dir.resolve(player + ".json");
         try (OutputStreamWriter out = new OutputStreamWriter(Files.newOutputStream(saveFile), StandardCharsets.UTF_8)) {
             String json = gson.toJson(advancementHolder);
