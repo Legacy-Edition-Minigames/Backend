@@ -21,7 +21,7 @@ public class AdvancementHolder {
 
     public void removeAdvancement(String advancement, String criteria) {
         if (advancements.containsKey(advancement)) {
-            advancements.get(advancement).criteria.remove("criteria");
+            advancements.get(advancement).criteria.remove(criteria);
             advancements.get(advancement).done = false;
             if (advancements.get(advancement).criteria.size() == 0)
                 advancements.remove(advancement);
@@ -35,7 +35,7 @@ public class AdvancementHolder {
         for (Map.Entry<String, JsonElement> entry : advancementJson.getAsJsonObject("criteria").entrySet()) {
             advancement.addCriteria(entry.getKey(), entry.getValue().getAsString());
         }
-        if (forceDone || advancementJson.get("done").getAsBoolean())
+        if (forceDone || (advancementJson.has("done") && advancementJson.get("done").getAsBoolean()))
             advancement.done = advancementJson.get("done").getAsBoolean();
     }
 
@@ -57,24 +57,16 @@ public class AdvancementHolder {
                 Advancement advancement = src.advancements.get(advancementKey);
                 JsonObject advancementJson = new JsonObject();
                 JsonObject criteriaJson = new JsonObject();
-                for (String criteria : advancement.criteria.keySet()) {
-                    criteriaJson.addProperty(criteria, advancement.criteria.get(criteria));
+                if(advancement != null) {
+                    for (String criteria : advancement.criteria.keySet()) {
+                        if (advancement.criteria.get(criteria) != null)
+                            criteriaJson.addProperty(criteria, advancement.criteria.get(criteria));
+                    }
+
+                    advancementJson.add("criteria", criteriaJson);
+                    advancementJson.addProperty("done", advancement.done);
+                    object.add(advancementKey, advancementJson);
                 }
-
-                advancementJson.add("criteria", criteriaJson);
-                advancementJson.addProperty("done", advancement.done);
-                object.add(advancementKey, advancementJson);
-            }
-
-            if (src.advancements.size() == 0) {
-                JsonObject advancementJson = new JsonObject();
-                JsonObject criteriaJson = new JsonObject();
-
-                criteriaJson.addProperty("requirement", "2022-07-02 23:25:14 -0400");
-
-                advancementJson.add("criteria", criteriaJson);
-                advancementJson.addProperty("done", true);
-                object.add("serverutils:dummy", advancementJson);
             }
 
             object.addProperty("DataVersion", src.DataVersion);
