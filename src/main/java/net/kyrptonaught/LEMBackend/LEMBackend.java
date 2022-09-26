@@ -22,6 +22,8 @@ public class LEMBackend {
         config.registerFile("config", new ServerConfig());
         config.load(true);
 
+        AdvancmentLoader.createDirectories();
+
         Javalin app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
                     javalinConfig.jsonMapper(new GsonMapper(gson));

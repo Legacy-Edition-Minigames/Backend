@@ -32,6 +32,14 @@ public class AdvancmentLoader {
         return advancementHolder;
     }
 
+    public static void createDirectories() {
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void registerAdvancementsFor(String player, AdvancementHolder advancementHolder) {
         advancementHolderCache.put(player, advancementHolder);
     }
@@ -71,11 +79,7 @@ public class AdvancmentLoader {
     }
 
     private static void save(String player, AdvancementHolder advancementHolder, Gson gson) {
-        try {
-            Files.createDirectories(dir);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        createDirectories();
         Path saveFile = dir.resolve(player + ".json");
         try (OutputStreamWriter out = new OutputStreamWriter(Files.newOutputStream(saveFile), StandardCharsets.UTF_8)) {
             String json = gson.toJson(advancementHolder);
