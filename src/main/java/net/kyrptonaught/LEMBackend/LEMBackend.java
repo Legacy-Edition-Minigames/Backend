@@ -9,7 +9,12 @@ import net.kyrptonaught.LEMBackend.advancements.AdvancmentLoader;
 import net.kyrptonaught.LEMBackend.config.ServerConfig;
 import net.kyrptonaught.LEMBackend.config.api.ConfigManager;
 
+import javax.imageio.IIOException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.Scanner;
 
 public class LEMBackend {
     public static ConfigManager config = new ConfigManager.MultiConfigManager("LEMBackend");
@@ -29,18 +34,34 @@ public class LEMBackend {
                     javalinConfig.jsonMapper(new GsonMapper(gson));
                 })
                 .start(getConfig().port);
-        app.get("/getAdvancements/{secret}/{uuid}", AdvancementRouter::getAdvancements);
-        app.get("/unloadPlayer/{secret}/{uuid}", AdvancementRouter::unloadPlayer);
-        app.post("/addAdvancements/{secret}/{uuid}", AdvancementRouter::addAdvancement);
-        app.post("/overwriteAdvancements/{secret}/{uuid}", AdvancementRouter::overwriteAdvancements);
-        app.post("/removeAdvancements/{secret}/{uuid}", AdvancementRouter::removeAdvancement);
+        app.get("/v0/{secret}/getAdvancements/{uuid}", AdvancementRouter::getAdvancements);
+        app.get("/v0/{secret}/unloadPlayer/{uuid}", AdvancementRouter::unloadPlayer);
+        app.post("/v0/{secret}/addAdvancements/{uuid}", AdvancementRouter::addAdvancement);
+        app.post("/v0/{secret}/overwriteAdvancements/{uuid}", AdvancementRouter::overwriteAdvancements);
+        app.post("/v0/{secret}/removeAdvancements/{uuid}", AdvancementRouter::removeAdvancement);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            app.close();
             System.out.println("Exited, force saving all...");
             AdvancmentLoader.saveAdvancements();
             System.out.println("Saved");
                 }, "Shutdown-thread")
         );
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Server listening. Use 'stop' to quit");
+
+        while (true) {
+            String input = null;
+            try {
+                input = br.readLine();
+            } catch (IOException ignored) {
+            }
+            if (input != null && input.equalsIgnoreCase("stop")) {
+                System.exit(0);
+                return;
+            }
+        }
     }
 
     public static ServerConfig getConfig() {
