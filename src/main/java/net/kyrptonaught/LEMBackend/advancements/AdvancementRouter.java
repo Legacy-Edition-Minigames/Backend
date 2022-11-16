@@ -14,7 +14,7 @@ public class AdvancementRouter {
         String uuid = ctx.pathParam("uuid");
 
         AdvancementHolder advancementHolder = AdvancmentLoader.getAdvancementsFor(uuid);
-        if (advancementHolder != null && secretsMatch(secret)) {
+        if (advancementHolder != null && LEMBackend.secretsMatch(secret)) {
                 ctx.json(advancementHolder);
             return;
         }
@@ -28,7 +28,7 @@ public class AdvancementRouter {
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && secretsMatch(secret)) {
+        if (object != null && LEMBackend.secretsMatch(secret)) {
             AdvancementHolder advancementHolder = AdvancmentLoader.getAdvancementsFor(uuid);
             object.remove("DataVersion").getAsInt();
             for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
@@ -49,7 +49,7 @@ public class AdvancementRouter {
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && secretsMatch(secret)) {
+        if (object != null && LEMBackend.secretsMatch(secret)) {
             AdvancementHolder other = AdvancmentLoader.getAdvancementsFor(uuid);
 
             String advancement = object.get("advancement").getAsString();
@@ -70,7 +70,7 @@ public class AdvancementRouter {
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && secretsMatch(secret)) {
+        if (object != null && LEMBackend.secretsMatch(secret)) {
             AdvancementHolder advancementHolder = AdvancementHolder.Serializer.deserialize(object);
             AdvancmentLoader.registerAdvancementsFor(uuid, advancementHolder);
             AdvancmentLoader.saveAdvancements(uuid);
@@ -85,7 +85,7 @@ public class AdvancementRouter {
         String secret = ctx.pathParam("secret");
         String uuid = ctx.pathParam("uuid");
 
-        if (secretsMatch(secret)) {
+        if (LEMBackend.secretsMatch(secret)) {
             AdvancmentLoader.unloadAdvancements(uuid);
             ctx.result("success");
             return;
@@ -94,7 +94,4 @@ public class AdvancementRouter {
         ctx.result("failed");
     }
 
-    public static boolean secretsMatch(String secret) {
-        return LEMBackend.getConfig().secretKey.equals(secret);
-    }
 }

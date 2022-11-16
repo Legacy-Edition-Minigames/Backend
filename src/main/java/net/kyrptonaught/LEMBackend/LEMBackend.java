@@ -8,6 +8,8 @@ import net.kyrptonaught.LEMBackend.advancements.AdvancementRouter;
 import net.kyrptonaught.LEMBackend.advancements.AdvancmentLoader;
 import net.kyrptonaught.LEMBackend.config.ServerConfig;
 import net.kyrptonaught.LEMBackend.config.api.ConfigManager;
+import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueHolder;
+import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 
 import javax.imageio.IIOException;
 import java.io.BufferedReader;
@@ -20,6 +22,7 @@ public class LEMBackend {
     public static ConfigManager config = new ConfigManager.MultiConfigManager("LEMBackend");
     public static Gson gson = new GsonBuilder()
             .registerTypeAdapter(AdvancementHolder.class, new AdvancementHolder.Serializer())
+            .serializeNulls()
             .create();
 
     public static void start() {
@@ -28,6 +31,7 @@ public class LEMBackend {
         config.load(true);
 
         AdvancmentLoader.createDirectories();
+        KeyValueHolder.load();
 
         Javalin app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
@@ -39,11 +43,15 @@ public class LEMBackend {
         app.post("/v0/{secret}/addAdvancements/{uuid}", AdvancementRouter::addAdvancement);
         app.post("/v0/{secret}/overwriteAdvancements/{uuid}", AdvancementRouter::overwriteAdvancements);
         app.post("/v0/{secret}/removeAdvancements/{uuid}", AdvancementRouter::removeAdvancement);
+        app.get("/v0/{secret}/kvs/set/{id}/{key}/{value}", KeyValueRouter::setValue);
+        app.get("/v0/{secret}/kvs/get/{id}/{key}", KeyValueRouter::getValue);
+        app.get("/v0/{secret}/kvs/reset/{id}/{key}", KeyValueRouter::resetValue);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             app.close();
             System.out.println("Exited, force saving all...");
             AdvancmentLoader.saveAdvancements();
+            KeyValueHolder.save();
             System.out.println("Saved");
                 }, "Shutdown-thread")
         );
@@ -66,5 +74,9 @@ public class LEMBackend {
 
     public static ServerConfig getConfig() {
         return (ServerConfig) config.getConfig("config");
+    }
+
+    public static boolean secretsMatch(String secret) {
+        return getConfig().secretKey.equals(secret);
     }
 }
