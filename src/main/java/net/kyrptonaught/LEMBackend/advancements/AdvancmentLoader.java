@@ -45,12 +45,12 @@ public class AdvancmentLoader {
     }
 
     public static void saveAdvancements(String player) {
-        save(player, advancementHolderCache.get(player), LEMBackend.gson);
+        save(player, advancementHolderCache.get(player), LEMBackend.config.gson);
     }
 
     public static void saveAdvancements() {
         advancementHolderCache.forEach((s, advancementHolder) -> {
-            save(s, advancementHolder, LEMBackend.gson);
+            save(s, advancementHolder, LEMBackend.config.gson);
         });
     }
 
@@ -60,7 +60,7 @@ public class AdvancmentLoader {
     }
 
     private static AdvancementHolder loadFromFile(String player) {
-        JsonObject obj = load(player, LEMBackend.gson);
+        JsonObject obj = load(player, LEMBackend.config.gson);
         if (obj == null) return null;
 
         return AdvancementHolder.Serializer.deserialize(obj);

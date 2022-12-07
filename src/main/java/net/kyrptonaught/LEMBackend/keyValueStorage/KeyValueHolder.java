@@ -65,7 +65,7 @@ public class KeyValueHolder {
         Path saveFile = dir.resolve("kvs.json");
         if (Files.exists(saveFile) && Files.isReadable(saveFile)) {
             try (InputStream in = Files.newInputStream(saveFile, StandardOpenOption.READ); InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-                JsonObject obj = LEMBackend.gson.fromJson(reader, JsonObject.class);
+                JsonObject obj = LEMBackend.config.gson.fromJson(reader, JsonObject.class);
                 obj.entrySet().forEach(outer -> {
                     String id = outer.getKey();
                     JsonObject inner = outer.getValue().getAsJsonObject();
@@ -84,7 +84,7 @@ public class KeyValueHolder {
         createDirectories();
         Path saveFile = dir.resolve("kvs.json");
         try (OutputStreamWriter out = new OutputStreamWriter(Files.newOutputStream(saveFile), StandardCharsets.UTF_8)) {
-            String json = LEMBackend.gson.toJson(storage);
+            String json = LEMBackend.config.gson.toJson(storage);
             out.write(json);
         } catch (Exception e) {
             e.printStackTrace();

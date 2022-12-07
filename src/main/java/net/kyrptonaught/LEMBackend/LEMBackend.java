@@ -20,11 +20,7 @@ import java.util.Scanner;
 
 public class LEMBackend {
     public static ConfigManager config = new ConfigManager.MultiConfigManager("LEMBackend");
-    public static Gson gson = new GsonBuilder()
-            .registerTypeAdapter(AdvancementHolder.class, new AdvancementHolder.Serializer())
-            .serializeNulls()
-            .create();
-
+    public static Gson gson = config.gson;
     public static void start() {
         config.setDir(Paths.get("data"));
         config.registerFile("config", new ServerConfig());

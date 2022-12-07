@@ -2,6 +2,7 @@ package net.kyrptonaught.LEMBackend.config.api;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.kyrptonaught.LEMBackend.advancements.AdvancementHolder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,14 +10,19 @@ import java.nio.file.Path;
 import java.util.HashMap;
 
 public class ConfigManager {
-    protected Gson gson;
+    public Gson gson;
     protected final HashMap<String, ConfigStorage> configs = new HashMap<>();
     protected Path dir;
     protected String MOD_ID;
 
     private ConfigManager(String mod_id) {
         this.MOD_ID = mod_id;
-        gson = new GsonBuilder().setPrettyPrinting().create();
+        gson = new GsonBuilder()
+                .registerTypeAdapter(AdvancementHolder.class, new AdvancementHolder.Serializer())
+                .serializeNulls()
+                .setPrettyPrinting()
+                .setLenient()
+                .create();
     }
 
     public void setDir(Path dir) {

@@ -1,5 +1,7 @@
 package net.kyrptonaught.LEMBackend.keyValueStorage;
 
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 
@@ -25,11 +27,12 @@ public class KeyValueRouter {
 
         if (LEMBackend.secretsMatch(secret)) {
             KeyValueHolder.setValue(id, key, value);
-            ctx.result("success");
+            ctx.json(result(true));
             return;
         }
-        ctx.result("failed");
+        ctx.json(result(false));
     }
+
     public static void resetValue(Context ctx) {
         String secret = ctx.pathParam("secret");
         String id = ctx.pathParam("id");
@@ -37,9 +40,15 @@ public class KeyValueRouter {
 
         if (LEMBackend.secretsMatch(secret)) {
             KeyValueHolder.resetValue(id, key);
-            ctx.result("success");
+            ctx.json(result(true));
             return;
         }
-        ctx.result("failed");
+        ctx.json(result(false));
+    }
+
+    public static JsonObject result(boolean success) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("success", success);
+        return obj;
     }
 }
