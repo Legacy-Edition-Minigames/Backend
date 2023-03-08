@@ -1,6 +1,5 @@
 package net.kyrptonaught.LEMBackend.linking;
 
-import com.google.gson.JsonObject;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 
@@ -8,20 +7,29 @@ public class LinkRouter {
 
     public static void linkPlayer(Context ctx) {
         String secret = ctx.pathParam("secret");
-        String mcUUID = ctx.pathParam("mcuuid");
+        String linkID = ctx.pathParam("linkid");
         String discordID = ctx.pathParam("discordid");
 
         if (LEMBackend.secretsMatch(secret)) {
-            LinkHolder.addLink(mcUUID, discordID);
-            ctx.json(result(true));
-            return;
+            String mcUUID = LinkHolder.finishLink(linkID, discordID);
+            if (mcUUID != null) {
+                ctx.result(mcUUID);
+                return;
+            }
         }
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
 
-    public static JsonObject result(boolean success) {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("success", success);
-        return obj;
+    public static void startLink(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String linkID = ctx.pathParam("linkid");
+        String mcUUID = ctx.pathParam("mcuuid");
+
+        if (LEMBackend.secretsMatch(secret)) {
+            LinkHolder.startLink(linkID, mcUUID);
+            ctx.result("success");
+            return;
+        }
+        ctx.status(500).result("failed");
     }
 }

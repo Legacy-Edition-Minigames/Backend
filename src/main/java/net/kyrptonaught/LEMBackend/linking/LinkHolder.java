@@ -26,10 +26,22 @@ public class LinkHolder {
     private static final ConcurrentHashMap<String, Link> mcToLinks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Link> discordToLinks = new ConcurrentHashMap<>();
 
+    private static final ConcurrentHashMap<String, LinkInProgress> linksInProgress = new ConcurrentHashMap<>();
+
     private static final Path dir = Paths.get("data/links");
 
-    public static void addLink(String mcUUID, String discordID) {
-        addLink(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE), mcUUID, discordID);
+    public static void startLink(String linkID, String mcUUID) {
+        linksInProgress.put(linkID, new LinkInProgress(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), mcUUID));
+    }
+
+    public static String finishLink(String linkID, String discordID) {
+        LinkInProgress link = linksInProgress.remove(linkID);
+
+        if (link != null) {
+            addLink(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), link.mcUUID, discordID);
+            return link.mcUUID;
+        }
+        return null;
     }
 
     public static void addLink(String dateLinked, String mcUUID, String discordID) {
@@ -41,7 +53,6 @@ public class LinkHolder {
         discordToLinks.put(discordID, link);
     }
 
-
     private static void createDirectories() {
         try {
             Files.createDirectories(dir);
@@ -49,7 +60,6 @@ public class LinkHolder {
             e.printStackTrace();
         }
     }
-
 
     public static void load() {
         createDirectories();
@@ -87,6 +97,16 @@ public class LinkHolder {
             this.dateLinked = dateLinked;
             this.mcUUID = mcUUID;
             this.discordID = discordID;
+        }
+    }
+
+    public static class LinkInProgress {
+        private final String linkStarted;
+        private final String mcUUID;
+
+        public LinkInProgress(String startTime, String mcUUID) {
+            this.linkStarted = startTime;
+            this.mcUUID = mcUUID;
         }
     }
 }

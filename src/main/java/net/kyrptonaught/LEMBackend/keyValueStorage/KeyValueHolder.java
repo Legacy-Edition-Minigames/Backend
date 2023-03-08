@@ -24,7 +24,6 @@ public class KeyValueHolder {
         return getIdStorage(id).get(key);
     }
 
-
     public static JsonObject getValueAsJson(String id, String key) {
         return result(getValue(id, key));
     }

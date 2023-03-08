@@ -15,11 +15,11 @@ public class AdvancementRouter {
 
         AdvancementHolder advancementHolder = AdvancmentLoader.getAdvancementsFor(uuid);
         if (advancementHolder != null && LEMBackend.secretsMatch(secret)) {
-                ctx.json(advancementHolder);
+            ctx.json(advancementHolder);
             return;
         }
 
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
 
     public static void addAdvancement(Context ctx) {
@@ -40,7 +40,7 @@ public class AdvancementRouter {
             return;
         }
 
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
 
     public static void removeAdvancement(Context ctx) {
@@ -54,14 +54,14 @@ public class AdvancementRouter {
 
             String advancement = object.get("advancement").getAsString();
             String criteria = object.get("criteria").getAsString();
-            other.removeAdvancement(advancement,criteria);
+            other.removeAdvancement(advancement, criteria);
 
             AdvancmentLoader.saveAdvancements(uuid);
             ctx.result("success");
             return;
         }
 
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
 
     public static void overwriteAdvancements(Context ctx) {
@@ -78,7 +78,7 @@ public class AdvancementRouter {
             return;
         }
 
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
 
     public static void unloadPlayer(Context ctx) {
@@ -91,7 +91,6 @@ public class AdvancementRouter {
             return;
         }
 
-        ctx.result("failed");
+        ctx.status(500).result("failed");
     }
-
 }

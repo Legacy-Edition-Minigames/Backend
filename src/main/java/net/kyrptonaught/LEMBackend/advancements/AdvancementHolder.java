@@ -6,7 +6,6 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
 import java.lang.reflect.Type;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -57,7 +56,7 @@ public class AdvancementHolder {
                 Advancement advancement = src.advancements.get(advancementKey);
                 JsonObject advancementJson = new JsonObject();
                 JsonObject criteriaJson = new JsonObject();
-                if(advancement != null) {
+                if (advancement != null) {
                     for (String criteria : advancement.criteria.keySet()) {
                         if (advancement.criteria.get(criteria) != null)
                             criteriaJson.addProperty(criteria, advancement.criteria.get(criteria));
