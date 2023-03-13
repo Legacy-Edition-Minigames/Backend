@@ -28,7 +28,7 @@ public class LinkHolder {
 
     private static final ConcurrentHashMap<String, LinkInProgress> linksInProgress = new ConcurrentHashMap<>();
 
-    private static final Path dir = Paths.get("data/links");
+    protected static final Path dir = Paths.get("data/links");
 
     public static void startLink(String linkID, String mcUUID) {
         linksInProgress.put(linkID, new LinkInProgress(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), mcUUID));

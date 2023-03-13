@@ -32,4 +32,41 @@ public class LinkRouter {
         }
         ctx.status(500).result("failed");
     }
+
+    public static void addSus(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String mcUUID = ctx.pathParam("mcuuid");
+
+        if (LEMBackend.secretsMatch(secret)) {
+            SusHolder.addSus(mcUUID);
+            SusHolder.save();
+            ctx.result("success");
+            return;
+        }
+        ctx.status(500).result("failed");
+    }
+
+    public static void removeSus(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String mcUUID = ctx.pathParam("mcuuid");
+
+        if (LEMBackend.secretsMatch(secret)) {
+            SusHolder.removeSus(mcUUID);
+            SusHolder.save();
+            ctx.result("success");
+            return;
+        }
+        ctx.status(500).result("failed");
+    }
+
+    public static void checkSus(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String mcUUID = ctx.pathParam("mcuuid");
+
+        if (LEMBackend.secretsMatch(secret)) {
+            ctx.json(SusHolder.isSus(mcUUID));
+            return;
+        }
+        ctx.status(500).result("failed");
+    }
 }

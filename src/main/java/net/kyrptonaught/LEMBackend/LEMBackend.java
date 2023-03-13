@@ -10,6 +10,7 @@ import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueHolder;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 import net.kyrptonaught.LEMBackend.linking.LinkHolder;
 import net.kyrptonaught.LEMBackend.linking.LinkRouter;
+import net.kyrptonaught.LEMBackend.linking.SusHolder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,12 +29,14 @@ public class LEMBackend {
         AdvancmentLoader.createDirectories();
         KeyValueHolder.load();
         LinkHolder.load();
+        SusHolder.load();
 
         Javalin app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
                     javalinConfig.jsonMapper(new GsonMapper(gson));
                 })
                 .start(getConfig().port);
+
         app.get("/v0/{secret}/getAdvancements/{uuid}", AdvancementRouter::getAdvancements);
         app.get("/v0/{secret}/unloadPlayer/{uuid}", AdvancementRouter::unloadPlayer);
         app.post("/v0/{secret}/addAdvancements/{uuid}", AdvancementRouter::addAdvancement);
@@ -44,6 +47,9 @@ public class LEMBackend {
         app.get("/v0/{secret}/kvs/reset/{id}/{key}", KeyValueRouter::resetValue);
         app.post("/v0/{secret}/link/start/{linkid}/{mcuuid}", LinkRouter::startLink);
         app.post("/v0/{secret}/link/finish/{linkid}/{discordid}", LinkRouter::linkPlayer);
+        app.post("/v0/{secret}/link/sus/add/{mcuuid}", LinkRouter::addSus);
+        app.post("/v0/{secret}/link/sus/remove/{mcuuid}", LinkRouter::removeSus);
+        app.get("/v0/{secret}/link/sus/check/{mcuuid}", LinkRouter::checkSus);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     app.close();
@@ -51,6 +57,7 @@ public class LEMBackend {
                     AdvancmentLoader.saveAdvancements();
                     KeyValueHolder.save();
                     LinkHolder.save();
+                    SusHolder.save();
                     System.out.println("Saved");
                 }, "Shutdown-thread")
         );
