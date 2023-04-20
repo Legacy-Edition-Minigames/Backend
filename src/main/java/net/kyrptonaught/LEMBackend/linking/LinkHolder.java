@@ -17,12 +17,14 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LinkHolder {
 
-    private static final List<Link> links = new ArrayList<>();
+    private static final List<Link> links = Collections.synchronizedList(new ArrayList<>());
     private static final ConcurrentHashMap<String, Link> mcToLinks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Link> discordToLinks = new ConcurrentHashMap<>();
 

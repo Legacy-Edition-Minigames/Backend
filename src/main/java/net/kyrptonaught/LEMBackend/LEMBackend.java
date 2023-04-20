@@ -11,6 +11,8 @@ import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 import net.kyrptonaught.LEMBackend.linking.LinkHolder;
 import net.kyrptonaught.LEMBackend.linking.LinkRouter;
 import net.kyrptonaught.LEMBackend.linking.SusHolder;
+import net.kyrptonaught.LEMBackend.userConfig.UserConfigHolder;
+import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,6 +32,7 @@ public class LEMBackend {
         KeyValueHolder.load();
         LinkHolder.load();
         SusHolder.load();
+        UserConfigHolder.load();
 
         Javalin app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
@@ -50,6 +53,9 @@ public class LEMBackend {
         app.post("/v0/{secret}/link/sus/add/{mcuuid}", LinkRouter::addSus);
         app.post("/v0/{secret}/link/sus/remove/{mcuuid}", LinkRouter::removeSus);
         app.get("/v0/{secret}/link/sus/check/{mcuuid}", LinkRouter::checkSus);
+        app.get("/v0/{secret}/getUserConfig/{uuid}", UserConfigRouter::getUserConfig);
+        app.post("/v0/{secret}/syncUserConfig/{uuid}/{key}/{value}", UserConfigRouter::syncUserConfig);
+        app.post("/v0/{secret}/removeUserConfig/{uuid}/{key}", UserConfigRouter::removeUserConfig);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     app.close();
@@ -58,6 +64,7 @@ public class LEMBackend {
                     KeyValueHolder.save();
                     LinkHolder.save();
                     SusHolder.save();
+                    UserConfigHolder.save();
                     System.out.println("Saved");
                 }, "Shutdown-thread")
         );
