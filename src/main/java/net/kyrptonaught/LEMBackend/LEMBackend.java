@@ -13,6 +13,8 @@ import net.kyrptonaught.LEMBackend.linking.LinkRouter;
 import net.kyrptonaught.LEMBackend.linking.SusHolder;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigHolder;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
+import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistHolder;
+import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistRouter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,6 +35,7 @@ public class LEMBackend {
         LinkHolder.load();
         SusHolder.load();
         UserConfigHolder.load();
+        WhitelistHolder.load();
 
         Javalin app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
@@ -56,6 +59,11 @@ public class LEMBackend {
         app.get("/v0/{secret}/getUserConfig/{uuid}", UserConfigRouter::getUserConfig);
         app.post("/v0/{secret}/syncUserConfig/{uuid}/{key}/{value}", UserConfigRouter::syncUserConfig);
         app.post("/v0/{secret}/removeUserConfig/{uuid}/{key}", UserConfigRouter::removeUserConfig);
+        app.get("/v0/{secret}/whitelist/get", WhitelistRouter::getWhitelist);
+        app.post("/v0/{secret}/whitelist/add/{uuid}/{mcname}", WhitelistRouter::addWhitelist);
+        app.post("/v0/{secret}/whitelist/remove/{uuid}/{mcname}", WhitelistRouter::removeWhitelist);
+        app.post("/v0/{secret}/whitelist/clear", WhitelistRouter::clearWhitelist);
+
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     app.close();
@@ -65,6 +73,7 @@ public class LEMBackend {
                     LinkHolder.save();
                     SusHolder.save();
                     UserConfigHolder.save();
+                    WhitelistHolder.save();
                     System.out.println("Saved");
                 }, "Shutdown-thread")
         );
