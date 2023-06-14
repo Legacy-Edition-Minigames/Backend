@@ -59,11 +59,12 @@ public class LEMBackend {
         app.get("/v0/{secret}/getUserConfig/{uuid}", UserConfigRouter::getUserConfig);
         app.post("/v0/{secret}/syncUserConfig/{uuid}/{key}/{value}", UserConfigRouter::syncUserConfig);
         app.post("/v0/{secret}/removeUserConfig/{uuid}/{key}", UserConfigRouter::removeUserConfig);
+        app.post("/v0/{secret}/userConfigSaveToPreset/{uuid}/{preset}", UserConfigRouter::saveToPreset);
+        app.post("/v0/{secret}/userConfigLoadFromPreset/{uuid}/{preset}", UserConfigRouter::loadFromPreset);
         app.get("/v0/{secret}/whitelist/get", WhitelistRouter::getWhitelist);
         app.post("/v0/{secret}/whitelist/add/{uuid}/{mcname}", WhitelistRouter::addWhitelist);
         app.post("/v0/{secret}/whitelist/remove/{uuid}/{mcname}", WhitelistRouter::removeWhitelist);
         app.post("/v0/{secret}/whitelist/clear", WhitelistRouter::clearWhitelist);
-
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     app.close();

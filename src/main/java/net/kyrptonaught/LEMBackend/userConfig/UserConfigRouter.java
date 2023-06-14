@@ -1,5 +1,7 @@
 package net.kyrptonaught.LEMBackend.userConfig;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 
@@ -42,6 +44,38 @@ public class UserConfigRouter {
 
         if (LEMBackend.secretsMatch(secret)) {
             UserConfigHolder.removeValue(uuid, key);
+            ctx.result("success");
+            return;
+        }
+
+        ctx.status(500).result("failed");
+    }
+
+    public static void saveToPreset(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String uuid = ctx.pathParam("uuid");
+        String presetID = ctx.pathParam("preset");
+
+        JsonArray keys = ctx.bodyAsClass(JsonArray.class);
+
+        if (LEMBackend.secretsMatch(secret)) {
+            UserConfigHolder.saveToPreset(uuid, presetID, keys);
+            ctx.result("success");
+            return;
+        }
+
+        ctx.status(500).result("failed");
+    }
+
+    public static void loadFromPreset(Context ctx) {
+        String secret = ctx.pathParam("secret");
+        String uuid = ctx.pathParam("uuid");
+        String presetID = ctx.pathParam("preset");
+
+        JsonArray keys = ctx.bodyAsClass(JsonArray.class);
+
+        if (LEMBackend.secretsMatch(secret)) {
+            UserConfigHolder.loadFromPreset(uuid, presetID, keys);
             ctx.result("success");
             return;
         }
