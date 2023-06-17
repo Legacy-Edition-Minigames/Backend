@@ -14,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,7 +26,7 @@ public class UserConfigHolder {
 
     public static void setValue(String player, String key, String value) {
         setValueInternal(player, key, value);
-        save();
+        saveUserConfigs();
     }
 
     public static void setValueInternal(String player, String key, String value) {
@@ -46,18 +45,21 @@ public class UserConfigHolder {
 
             if (userConfigs.get(player).size() == 0)
                 userConfigs.remove(player);
-            save();
+            saveUserConfigs();
         }
     }
 
     public static void saveToPreset(String player, String presetID, JsonArray keys) {
         if (!userConfigs.containsKey(player)) userConfigs.put(player, new ConcurrentHashMap<>());
 
+        if (userConfigPresets.containsKey(player))
+            userConfigPresets.get(player).remove(presetID);
+
         for (JsonElement element : keys) {
             String key = element.getAsString();
-            setPresetValue(player, presetID, key, userConfigs.get(player).get(key));
+            setPresetValueInternal(player, presetID, key, userConfigs.get(player).get(key));
         }
-        save();
+        saveConfigPresets();
     }
 
     public static void loadFromPreset(String player, String presetID, JsonArray keys) {
@@ -69,10 +71,10 @@ public class UserConfigHolder {
             String key = element.getAsString();
             userConfigs.get(player).put(key, userConfigPresets.get(player).get(presetID).get(key));
         }
-        save();
+        saveUserConfigs();
     }
 
-    public static void setPresetValue(String player, String presetID, String key, String value) {
+    private static void setPresetValueInternal(String player, String presetID, String key, String value) {
         if (!userConfigPresets.containsKey(player)) userConfigPresets.put(player, new ConcurrentHashMap<>());
         var playerPresets = userConfigPresets.get(player);
         if (!playerPresets.containsKey(presetID)) playerPresets.put(presetID, new ConcurrentHashMap<>());
@@ -111,7 +113,7 @@ public class UserConfigHolder {
                 for (Map.Entry<String, JsonElement> entry : obj.entrySet())
                     for (Map.Entry<String, JsonElement> innerEntry : entry.getValue().getAsJsonObject().entrySet())
                         for (Map.Entry<String, JsonElement> innerEntry2 : innerEntry.getValue().getAsJsonObject().entrySet())
-                            setPresetValue(entry.getKey(), innerEntry.getKey(), innerEntry2.getKey(), innerEntry2.getValue().getAsString());
+                            setPresetValueInternal(entry.getKey(), innerEntry.getKey(), innerEntry2.getKey(), innerEntry2.getValue().getAsString());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -120,13 +122,20 @@ public class UserConfigHolder {
 
     public static void save() {
         createDirectories();
+        saveUserConfigs();
+        saveConfigPresets();
+    }
+
+    private static void saveUserConfigs() {
         try (OutputStreamWriter out = new OutputStreamWriter(Files.newOutputStream(dir.resolve("userConfigs.json")), StandardCharsets.UTF_8)) {
             String json = LEMBackend.config.gson.toJson(userConfigs);
             out.write(json);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
+    private static void saveConfigPresets() {
         try (OutputStreamWriter out = new OutputStreamWriter(Files.newOutputStream(dir.resolve("userConfigsPresets.json")), StandardCharsets.UTF_8)) {
             String json = LEMBackend.config.gson.toJson(userConfigPresets);
             out.write(json);
