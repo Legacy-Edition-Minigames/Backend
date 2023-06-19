@@ -56,7 +56,7 @@ public class UserConfigRouter {
         String uuid = ctx.pathParam("uuid");
         String presetID = ctx.pathParam("preset");
 
-        JsonArray keys = ctx.bodyAsClass(JsonArray.class);
+        JsonObject keys = ctx.bodyAsClass(JsonObject.class);
 
         if (LEMBackend.secretsMatch(secret)) {
             UserConfigHolder.saveToPreset(uuid, presetID, keys);

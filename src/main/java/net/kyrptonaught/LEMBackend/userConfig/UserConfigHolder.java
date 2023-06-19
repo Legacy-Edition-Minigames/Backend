@@ -49,15 +49,14 @@ public class UserConfigHolder {
         }
     }
 
-    public static void saveToPreset(String player, String presetID, JsonArray keys) {
+    public static void saveToPreset(String player, String presetID, JsonObject keys) {
         if (!userConfigs.containsKey(player)) userConfigs.put(player, new ConcurrentHashMap<>());
 
         if (userConfigPresets.containsKey(player))
             userConfigPresets.get(player).remove(presetID);
 
-        for (JsonElement element : keys) {
-            String key = element.getAsString();
-            setPresetValueInternal(player, presetID, key, userConfigs.get(player).get(key));
+        for (Map.Entry<String, JsonElement> element : keys.entrySet()) {
+            setPresetValueInternal(player, presetID, element.getKey(), element.getValue().getAsString());
         }
         saveConfigPresets();
     }
