@@ -58,7 +58,9 @@ public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
 
         JsonArray keys = ctx.bodyAsClass(JsonArray.class);
         module.loadFromPreset(uuid, presetID, keys);
-        ctx.result("success");
+
+        ConcurrentHashMap<String, String> dataStorage = module.getValues(uuid);
+        ctx.json(dataStorage);
     }
 
     public void unloadPlayer(Context ctx) {
