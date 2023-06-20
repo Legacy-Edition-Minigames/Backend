@@ -16,6 +16,7 @@ public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
         route(HTTP.POST, "/v0/{secret}/removeUserConfig/{uuid}/{key}", this::removeUserConfig);
         route(HTTP.POST, "/v0/{secret}/userConfigSaveToPreset/{uuid}/{preset}", this::saveToPreset);
         route(HTTP.POST, "/v0/{secret}/userConfigLoadFromPreset/{uuid}/{preset}", this::loadFromPreset);
+        route(HTTP.POST, "/v0/{secret}/unloadUserConfig/{uuid}", this::unloadPlayer);
     }
 
     public void getUserConfig(Context ctx) {
@@ -57,6 +58,13 @@ public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
 
         JsonArray keys = ctx.bodyAsClass(JsonArray.class);
         module.loadFromPreset(uuid, presetID, keys);
+        ctx.result("success");
+    }
+
+    public void unloadPlayer(Context ctx) {
+        String uuid = ctx.pathParam("uuid");
+
+        module.unloadPlayer(uuid);
         ctx.result("success");
     }
 }
