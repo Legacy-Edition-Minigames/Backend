@@ -2,18 +2,17 @@ package net.kyrptonaught.LEMBackend;
 
 import com.google.gson.Gson;
 import io.javalin.Javalin;
+import net.kyrptonaught.LEMBackend.advancements.AdvancementModule;
 import net.kyrptonaught.LEMBackend.advancements.AdvancementRouter;
-import net.kyrptonaught.LEMBackend.advancements.AdvancmentLoader;
 import net.kyrptonaught.LEMBackend.config.ServerConfig;
 import net.kyrptonaught.LEMBackend.config.api.ConfigManager;
-import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueHolder;
+import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueModule;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
-import net.kyrptonaught.LEMBackend.linking.LinkHolder;
 import net.kyrptonaught.LEMBackend.linking.LinkRouter;
-import net.kyrptonaught.LEMBackend.linking.SusHolder;
-import net.kyrptonaught.LEMBackend.userConfig.UserConfigHolder;
+import net.kyrptonaught.LEMBackend.linking.LinkingModule;
+import net.kyrptonaught.LEMBackend.userConfig.UserConfigModule;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
-import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistHolder;
+import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistModule;
 import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistRouter;
 
 import java.io.BufferedReader;
@@ -24,57 +23,39 @@ import java.nio.file.Paths;
 public class LEMBackend {
     public static ConfigManager config = new ConfigManager.MultiConfigManager("LEMBackend");
     public static Gson gson = config.gson;
+    public static Javalin app;
 
     public static void start() {
         config.setDir(Paths.get("data"));
         config.registerFile("config", new ServerConfig());
         config.load(true);
 
-        AdvancmentLoader.createDirectories();
-        KeyValueHolder.load();
-        LinkHolder.load();
-        SusHolder.load();
-        UserConfigHolder.load();
-        WhitelistHolder.load();
+        Mod[] modules = new Mod[]{
+                new Mod(new WhitelistModule(), new WhitelistRouter()),
+                new Mod(new UserConfigModule(), new UserConfigRouter()),
+                new Mod(new LinkingModule(), new LinkRouter()),
+                new Mod(new KeyValueModule(), new KeyValueRouter()),
+                new Mod(new AdvancementModule(), new AdvancementRouter()),
+        };
 
-        Javalin app = Javalin.create((javalinConfig) -> {
+        app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
                     javalinConfig.jsonMapper(new GsonMapper(gson));
                 })
                 .start(getConfig().port);
 
-        app.get("/v0/{secret}/getAdvancements/{uuid}", AdvancementRouter::getAdvancements);
-        app.get("/v0/{secret}/unloadPlayer/{uuid}", AdvancementRouter::unloadPlayer);
-        app.post("/v0/{secret}/addAdvancements/{uuid}", AdvancementRouter::addAdvancement);
-        app.post("/v0/{secret}/overwriteAdvancements/{uuid}", AdvancementRouter::overwriteAdvancements);
-        app.post("/v0/{secret}/removeAdvancements/{uuid}", AdvancementRouter::removeAdvancement);
-        app.get("/v0/{secret}/kvs/set/{id}/{key}/{value}", KeyValueRouter::setValue);
-        app.get("/v0/{secret}/kvs/get/{id}/{key}", KeyValueRouter::getValue);
-        app.get("/v0/{secret}/kvs/reset/{id}/{key}", KeyValueRouter::resetValue);
-        app.post("/v0/{secret}/link/start/{linkid}/{mcuuid}", LinkRouter::startLink);
-        app.post("/v0/{secret}/link/finish/{linkid}/{discordid}", LinkRouter::linkPlayer);
-        app.post("/v0/{secret}/link/sus/add/{mcuuid}", LinkRouter::addSus);
-        app.post("/v0/{secret}/link/sus/remove/{mcuuid}", LinkRouter::removeSus);
-        app.get("/v0/{secret}/link/sus/check/{mcuuid}", LinkRouter::checkSus);
-        app.get("/v0/{secret}/getUserConfig/{uuid}", UserConfigRouter::getUserConfig);
-        app.post("/v0/{secret}/syncUserConfig/{uuid}/{key}/{value}", UserConfigRouter::syncUserConfig);
-        app.post("/v0/{secret}/removeUserConfig/{uuid}/{key}", UserConfigRouter::removeUserConfig);
-        app.post("/v0/{secret}/userConfigSaveToPreset/{uuid}/{preset}", UserConfigRouter::saveToPreset);
-        app.post("/v0/{secret}/userConfigLoadFromPreset/{uuid}/{preset}", UserConfigRouter::loadFromPreset);
-        app.get("/v0/{secret}/whitelist/get", WhitelistRouter::getWhitelist);
-        app.post("/v0/{secret}/whitelist/add/{uuid}/{mcname}", WhitelistRouter::addWhitelist);
-        app.post("/v0/{secret}/whitelist/remove/{uuid}/{mcname}", WhitelistRouter::removeWhitelist);
-        app.post("/v0/{secret}/whitelist/clear", WhitelistRouter::clearWhitelist);
+        for (Mod module : modules) {
+            module.module.load(gson);
+            module.router.addRoutes();
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     app.close();
                     System.out.println("Exited, force saving all...");
-                    AdvancmentLoader.saveAdvancements();
-                    KeyValueHolder.save();
-                    LinkHolder.save();
-                    SusHolder.save();
-                    UserConfigHolder.save();
-                    WhitelistHolder.save();
+
+                    for (Mod module : modules)
+                        module.module.save(gson);
+
                     System.out.println("Saved");
                 }, "Shutdown-thread")
         );
@@ -101,5 +82,16 @@ public class LEMBackend {
 
     public static boolean secretsMatch(String secret) {
         return getConfig().secretKey.equals(secret);
+    }
+
+    public static class Mod {
+        Module module;
+        ModuleRouter router;
+
+        public Mod(Module module, ModuleRouter router) {
+            this.module = module;
+            this.router = router;
+            this.router.setModule(module);
+        }
     }
 }

@@ -3,39 +3,46 @@ package net.kyrptonaught.LEMBackend.advancements;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.javalin.http.Context;
-import net.kyrptonaught.LEMBackend.LEMBackend;
+import net.kyrptonaught.LEMBackend.ModuleRouter;
 
 import java.util.Map;
 
-public class AdvancementRouter {
+public class AdvancementRouter extends ModuleRouter<AdvancementModule> {
 
-    public static void getAdvancements(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    @Override
+    public void addRoutes() {
+        route(HTTP.GET, "/v0/{secret}/getAdvancements/{uuid}", this::getAdvancements);
+        route(HTTP.GET, "/v0/{secret}/unloadPlayer/{uuid}", this::unloadPlayer);
+        route(HTTP.POST, "/v0/{secret}/addAdvancements/{uuid}", this::addAdvancement);
+        route(HTTP.POST, "/v0/{secret}/overwriteAdvancements/{uuid}", this::overwriteAdvancements);
+        route(HTTP.POST, "/v0/{secret}/removeAdvancements/{uuid}", this::removeAdvancement);
+    }
+
+    public void getAdvancements(Context ctx) {
         String uuid = ctx.pathParam("uuid");
 
-        AdvancementHolder advancementHolder = AdvancmentLoader.getAdvancementsFor(uuid);
-        if (advancementHolder != null && LEMBackend.secretsMatch(secret)) {
-            ctx.json(advancementHolder);
+        PlayerAdvancements playerAdvancements = module.getAdvancementsFor(uuid);
+        if (playerAdvancements != null) {
+            ctx.json(playerAdvancements);
             return;
         }
 
         ctx.status(500).result("failed");
     }
 
-    public static void addAdvancement(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void addAdvancement(Context ctx) {
         String uuid = ctx.pathParam("uuid");
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && LEMBackend.secretsMatch(secret)) {
-            AdvancementHolder advancementHolder = AdvancmentLoader.getAdvancementsFor(uuid);
+        if (object != null) {
+            PlayerAdvancements playerAdvancements = module.getAdvancementsFor(uuid);
             object.remove("DataVersion").getAsInt();
             for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-                advancementHolder.addAdvancementCriteria(entry.getKey(), entry.getValue().getAsJsonObject(), false);
+                playerAdvancements.addAdvancementCriteria(entry.getKey(), entry.getValue().getAsJsonObject(), false);
             }
 
-            AdvancmentLoader.saveAdvancements(uuid);
+            module.saveAdvancements(uuid);
             ctx.result("success");
             return;
         }
@@ -43,20 +50,19 @@ public class AdvancementRouter {
         ctx.status(500).result("failed");
     }
 
-    public static void removeAdvancement(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void removeAdvancement(Context ctx) {
         String uuid = ctx.pathParam("uuid");
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && LEMBackend.secretsMatch(secret)) {
-            AdvancementHolder other = AdvancmentLoader.getAdvancementsFor(uuid);
+        if (object != null) {
+            PlayerAdvancements other = module.getAdvancementsFor(uuid);
 
             String advancement = object.get("advancement").getAsString();
             String criteria = object.get("criteria").getAsString();
             other.removeAdvancement(advancement, criteria);
 
-            AdvancmentLoader.saveAdvancements(uuid);
+            module.saveAdvancements(uuid);
             ctx.result("success");
             return;
         }
@@ -64,16 +70,15 @@ public class AdvancementRouter {
         ctx.status(500).result("failed");
     }
 
-    public static void overwriteAdvancements(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void overwriteAdvancements(Context ctx) {
         String uuid = ctx.pathParam("uuid");
 
         JsonObject object = ctx.bodyAsClass(JsonObject.class);
 
-        if (object != null && LEMBackend.secretsMatch(secret)) {
-            AdvancementHolder advancementHolder = AdvancementHolder.Serializer.deserialize(object);
-            AdvancmentLoader.registerAdvancementsFor(uuid, advancementHolder);
-            AdvancmentLoader.saveAdvancements(uuid);
+        if (object != null) {
+            PlayerAdvancements playerAdvancements = AdvancementSerializer.deserialize(object);
+            module.registerAdvancementsFor(uuid, playerAdvancements);
+            module.saveAdvancements(uuid);
             ctx.result("success");
             return;
         }
@@ -81,16 +86,10 @@ public class AdvancementRouter {
         ctx.status(500).result("failed");
     }
 
-    public static void unloadPlayer(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void unloadPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            AdvancmentLoader.unloadAdvancements(uuid);
-            ctx.result("success");
-            return;
-        }
-
-        ctx.status(500).result("failed");
+        module.unloadAdvancements(uuid);
+        ctx.result("success");
     }
 }

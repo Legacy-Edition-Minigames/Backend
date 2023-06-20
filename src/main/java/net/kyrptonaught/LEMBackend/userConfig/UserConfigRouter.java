@@ -3,83 +3,60 @@ package net.kyrptonaught.LEMBackend.userConfig;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.javalin.http.Context;
-import net.kyrptonaught.LEMBackend.LEMBackend;
+import net.kyrptonaught.LEMBackend.ModuleRouter;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class UserConfigRouter {
+public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
 
-    public static void getUserConfig(Context ctx) {
-        String secret = ctx.pathParam("secret");
-        String uuid = ctx.pathParam("uuid");
-
-        ConcurrentHashMap<String, String> dataStorage = UserConfigHolder.getValues(uuid);
-        if (dataStorage != null && LEMBackend.secretsMatch(secret)) {
-            ctx.json(dataStorage);
-            return;
-        }
-
-        ctx.status(500).result("failed");
+    @Override
+    public void addRoutes() {
+        route(HTTP.GET, "/v0/{secret}/getUserConfig/{uuid}", this::getUserConfig);
+        route(HTTP.POST, "/v0/{secret}/syncUserConfig/{uuid}/{key}/{value}", this::syncUserConfig);
+        route(HTTP.POST, "/v0/{secret}/removeUserConfig/{uuid}/{key}", this::removeUserConfig);
+        route(HTTP.POST, "/v0/{secret}/userConfigSaveToPreset/{uuid}/{preset}", this::saveToPreset);
+        route(HTTP.POST, "/v0/{secret}/userConfigLoadFromPreset/{uuid}/{preset}", this::loadFromPreset);
     }
 
-    public static void syncUserConfig(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void getUserConfig(Context ctx) {
+        String uuid = ctx.pathParam("uuid");
+
+        ConcurrentHashMap<String, String> dataStorage = module.getValues(uuid);
+        ctx.json(dataStorage);
+    }
+
+    public void syncUserConfig(Context ctx) {
         String key = ctx.pathParam("key");
         String uuid = ctx.pathParam("uuid");
         String value = ctx.pathParam("value");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            UserConfigHolder.setValue(uuid, key, value);
-            ctx.result("success");
-            return;
-        }
-
-        ctx.status(500).result("failed");
+        module.setValue(uuid, key, value);
+        ctx.result("success");
     }
 
-    public static void removeUserConfig(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void removeUserConfig(Context ctx) {
         String key = ctx.pathParam("key");
         String uuid = ctx.pathParam("uuid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            UserConfigHolder.removeValue(uuid, key);
-            ctx.result("success");
-            return;
-        }
-
-        ctx.status(500).result("failed");
+        module.removeValue(uuid, key);
+        ctx.result("success");
     }
 
-    public static void saveToPreset(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void saveToPreset(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         String presetID = ctx.pathParam("preset");
 
         JsonObject keys = ctx.bodyAsClass(JsonObject.class);
-
-        if (LEMBackend.secretsMatch(secret)) {
-            UserConfigHolder.saveToPreset(uuid, presetID, keys);
-            ctx.result("success");
-            return;
-        }
-
-        ctx.status(500).result("failed");
+        module.saveToPreset(uuid, presetID, keys);
+        ctx.result("success");
     }
 
-    public static void loadFromPreset(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void loadFromPreset(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         String presetID = ctx.pathParam("preset");
 
         JsonArray keys = ctx.bodyAsClass(JsonArray.class);
-
-        if (LEMBackend.secretsMatch(secret)) {
-            UserConfigHolder.loadFromPreset(uuid, presetID, keys);
-            ctx.result("success");
-            return;
-        }
-
-        ctx.status(500).result("failed");
+        module.loadFromPreset(uuid, presetID, keys);
+        ctx.result("success");
     }
 }

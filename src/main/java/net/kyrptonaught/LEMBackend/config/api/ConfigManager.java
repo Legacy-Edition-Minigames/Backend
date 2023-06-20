@@ -2,7 +2,8 @@ package net.kyrptonaught.LEMBackend.config.api;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.kyrptonaught.LEMBackend.advancements.AdvancementHolder;
+import net.kyrptonaught.LEMBackend.advancements.AdvancementSerializer;
+import net.kyrptonaught.LEMBackend.advancements.PlayerAdvancements;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,7 +19,7 @@ public class ConfigManager {
     private ConfigManager(String mod_id) {
         this.MOD_ID = mod_id;
         gson = new GsonBuilder()
-                .registerTypeAdapter(AdvancementHolder.class, new AdvancementHolder.Serializer())
+                .registerTypeAdapter(PlayerAdvancements.class, new AdvancementSerializer())
                 .serializeNulls()
                 .setPrettyPrinting()
                 .setLenient()

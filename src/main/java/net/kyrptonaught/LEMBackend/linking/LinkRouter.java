@@ -1,72 +1,58 @@
 package net.kyrptonaught.LEMBackend.linking;
 
 import io.javalin.http.Context;
-import net.kyrptonaught.LEMBackend.LEMBackend;
+import net.kyrptonaught.LEMBackend.ModuleRouter;
 
-public class LinkRouter {
+public class LinkRouter extends ModuleRouter<LinkingModule> {
 
-    public static void linkPlayer(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    @Override
+    public void addRoutes() {
+        route(HTTP.POST, "/v0/{secret}/link/start/{linkid}/{mcuuid}", this::startLink);
+        route(HTTP.POST, "/v0/{secret}/link/finish/{linkid}/{discordid}", this::linkPlayer);
+        route(HTTP.POST, "/v0/{secret}/link/sus/add/{mcuuid}", this::addSus);
+        route(HTTP.POST, "/v0/{secret}/link/sus/remove/{mcuuid}", this::removeSus);
+        route(HTTP.GET, "/v0/{secret}/link/sus/check/{mcuuid}", this::checkSus);
+    }
+
+    public void startLink(Context ctx) {
+        String linkID = ctx.pathParam("linkid");
+        String mcUUID = ctx.pathParam("mcuuid");
+
+        module.startLink(linkID, mcUUID);
+        ctx.result("success");
+    }
+
+    public void linkPlayer(Context ctx) {
         String linkID = ctx.pathParam("linkid");
         String discordID = ctx.pathParam("discordid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            String mcUUID = LinkHolder.finishLink(linkID, discordID);
-            if (mcUUID != null) {
-                ctx.result(mcUUID);
-                return;
-            }
+        String mcUUID = module.finishLink(linkID, discordID);
+        if (mcUUID != null) {
+            ctx.result(mcUUID);
+            return;
         }
+
         ctx.status(500).result("failed");
     }
 
-    public static void startLink(Context ctx) {
-        String secret = ctx.pathParam("secret");
-        String linkID = ctx.pathParam("linkid");
+
+    public void addSus(Context ctx) {
         String mcUUID = ctx.pathParam("mcuuid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            LinkHolder.startLink(linkID, mcUUID);
-            ctx.result("success");
-            return;
-        }
-        ctx.status(500).result("failed");
+        module.addSus(mcUUID);
+        ctx.result("success");
     }
 
-    public static void addSus(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void removeSus(Context ctx) {
         String mcUUID = ctx.pathParam("mcuuid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            SusHolder.addSus(mcUUID);
-            SusHolder.save();
-            ctx.result("success");
-            return;
-        }
-        ctx.status(500).result("failed");
+        module.removeSus(mcUUID);
+        ctx.result("success");
     }
 
-    public static void removeSus(Context ctx) {
-        String secret = ctx.pathParam("secret");
+    public void checkSus(Context ctx) {
         String mcUUID = ctx.pathParam("mcuuid");
 
-        if (LEMBackend.secretsMatch(secret)) {
-            SusHolder.removeSus(mcUUID);
-            SusHolder.save();
-            ctx.result("success");
-            return;
-        }
-        ctx.status(500).result("failed");
-    }
-
-    public static void checkSus(Context ctx) {
-        String secret = ctx.pathParam("secret");
-        String mcUUID = ctx.pathParam("mcuuid");
-
-        if (LEMBackend.secretsMatch(secret)) {
-            ctx.json(SusHolder.isSus(mcUUID));
-            return;
-        }
-        ctx.status(500).result("failed");
+        ctx.json(module.isSus(mcUUID));
     }
 }
