@@ -50,6 +50,7 @@ public class WhitelistModule extends Module {
         createDirectories();
 
         JsonArray obj = readFileJson(gson, "whitelist.json", JsonArray.class);
+        if (obj == null) return;
         for (JsonElement entry : obj) {
             add(entry.getAsJsonObject().get("uuid").getAsString(), entry.getAsJsonObject().get("name").getAsString());
         }

@@ -71,14 +71,18 @@ public class LinkingModule extends Module {
     public void load(Gson gson) {
         createDirectories();
 
-        for (JsonElement item : readFileJson(gson, "links.json", JsonArray.class)) {
-            JsonObject link = item.getAsJsonObject();
-            addLink(link.get("dateLinked").getAsString(), link.get("mcUUID").getAsString(), link.get("discordID").getAsString());
-        }
+        JsonArray linkJson = readFileJson(gson, "links.json", JsonArray.class);
+        if (linkJson != null)
+            for (JsonElement item : linkJson) {
+                JsonObject link = item.getAsJsonObject();
+                addLink(link.get("dateLinked").getAsString(), link.get("mcUUID").getAsString(), link.get("discordID").getAsString());
+            }
 
-        for (JsonElement item : readFileJson(gson, "sus.json", JsonArray.class)) {
-            sussies.add(item.getAsString());
-        }
+        JsonArray susJson = readFileJson(gson, "sus.json", JsonArray.class);
+        if (linkJson != null)
+            for (JsonElement item : susJson) {
+                sussies.add(item.getAsString());
+            }
     }
 
     @Override
