@@ -1,14 +1,9 @@
 package net.kyrptonaught.LEMBackend.userConfig;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class UserConfigModule extends Module {
 
@@ -18,7 +13,7 @@ public class UserConfigModule extends Module {
 
     public JsonObject loadPlayer(String player) {
         JsonObject obj = readFileJson(LEMBackend.gson, player + ".json", JsonObject.class);
-        if(obj == null) obj = new JsonObject();
+        if (obj == null) obj = new JsonObject();
 
         return obj;
     }
@@ -31,5 +26,4 @@ public class UserConfigModule extends Module {
     public void load(Gson gson) {
         createDirectories();
     }
-
 }

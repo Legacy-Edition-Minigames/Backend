@@ -49,7 +49,7 @@ public class KeyValueModule extends Module {
         createDirectories();
 
         JsonObject obj = readFileJson(gson, "kvs.json", JsonObject.class);
-        if(obj == null) return;
+        if (obj == null) return;
         obj.entrySet().forEach(outer -> {
             String id = outer.getKey();
             JsonObject inner = outer.getValue().getAsJsonObject();
