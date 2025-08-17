@@ -4,17 +4,20 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
+import net.kyrptonaught.LEMBackend.discordBridge.PatreonTier;
 
 public class UserConfigModule extends Module {
 
     public UserConfigModule() {
-        super("data/userConfigs");
+        super("userConfigs");
     }
 
     public JsonObject loadPlayer(String player) {
         JsonObject obj = readFileJson(LEMBackend.gson, player + ".json", JsonObject.class);
-        if (obj == null) obj = new JsonObject();
+        if (obj == null)
+            obj = new JsonObject();
 
+        integrations(player, obj);
         return obj;
     }
 
@@ -25,5 +28,19 @@ public class UserConfigModule extends Module {
     @Override
     public void load(Gson gson) {
         createDirectories();
+    }
+
+    public void integrations(String player, JsonObject obj) {
+        boolean sus = LEMBackend.LinkingModule.module.isSus(player);
+        String discordID = LEMBackend.LinkingModule.module.getDiscordLink(player);
+
+        obj.addProperty("lem.base:suspicious", sus);
+        if (discordID == null) {
+            obj.addProperty("lem.base:discord_linked", false);
+            obj.addProperty("lem.base:patreon_tier", PatreonTier.NONE.toString());
+        } else {
+            obj.addProperty("lem.base:discord_linked", true);
+            obj.addProperty("lem.base:patreon_tier", LEMBackend.BridgeModule.module.getPatreonTier(discordID).toString());
+        }
     }
 }

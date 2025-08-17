@@ -1,0 +1,88 @@
+import net.fabricmc.loom.task.RemapJarTask
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+	id 'com.gradleup.shadow' version '9.0.2'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+	maven { url 'https://maven.fabricmc.net' }
+	maven { url "https://maven.kyrptonaught.dev" }
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_version}")
+
+	//Discord Bridge
+	shadow implementation("net.dv8tion:JDA:5.6.1") { exclude module: 'opus-java' }
+
+	//Javalin
+	shadow implementation("io.javalin:javalin:6.7.0")
+}
+
+configurations {
+	// Determines shaded dependencies
+	shade
+	developmentElements {
+		extendsFrom(implementation, namedElements)
+	}
+}
+
+shadowJar {
+	minimize()
+	// Store in temporary folder instead of outputting directly
+	destinationDirectory = file("${buildDir}/tmp/allJar")
+	// Only shade dependencies not provided by Minecraft/FAPI/FLoader
+	configurations = [project.configurations.shadow]
+	relocate 'okhttp3', 'net.dv8tion.shaded.okhttp3'
+	relocate 'okio' , 'net.dv8tion.shaded.okio'
+
+	//Exclude META-INF entries of shaded deps
+	exclude('META-INF/**')
+	// include() upsets shadow, so use from() instead
+	from('LICENSE.md', 'NOTICE.txt')
+	from('licenses') {
+		into('licenses')
+	}
+}
+
+remapJar {
+	dependsOn(shadowJar)
+	inputFile = tasks.shadowJar.archiveFile
+}
+
+base {
+	archivesName = project.archives_base_name
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	// Store in temporary folder instead of outputting directly
+	destinationDirectory = file("${buildDir}/tmp/thinJar")
+	from("LICENSE") {
+		rename { "${it}_${base.archivesName.get()}"}
+	}
+}

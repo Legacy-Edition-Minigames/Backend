@@ -11,7 +11,7 @@ public class KeyValueModule extends Module {
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, String>> storage = new ConcurrentHashMap<>();
 
     public KeyValueModule() {
-        super("data/kvs");
+        super("kvs");
     }
 
     public String getValue(String id, String key) {

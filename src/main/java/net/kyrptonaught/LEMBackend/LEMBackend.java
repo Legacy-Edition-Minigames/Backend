@@ -2,41 +2,41 @@ package net.kyrptonaught.LEMBackend;
 
 import com.google.gson.Gson;
 import io.javalin.Javalin;
-import net.kyrptonaught.LEMBackend.advancements.AdvancementModule;
-import net.kyrptonaught.LEMBackend.advancements.AdvancementRouter;
-import net.kyrptonaught.LEMBackend.config.ServerConfig;
-import net.kyrptonaught.LEMBackend.config.api.ConfigManager;
-import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueModule;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.kyrptonaught.LEMBackend.config.ConfigManager;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeRouter;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 import net.kyrptonaught.LEMBackend.linking.LinkRouter;
-import net.kyrptonaught.LEMBackend.linking.LinkingModule;
-import net.kyrptonaught.LEMBackend.userConfig.UserConfigModule;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
-import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistModule;
 import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistRouter;
+import net.minecraft.server.MinecraftServer;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
-public class LEMBackend {
-    public static ConfigManager config = new ConfigManager.MultiConfigManager("LEMBackend");
-    public static Gson gson = config.gson;
+public class LEMBackend implements ModInitializer {
+    private static ServerConfig config;
+    public static Gson gson = ConfigManager.getGSON();
     public static Javalin app;
+    public static MinecraftServer minecraftServer;
+    public static WhitelistRouter WhitelistModule;
+    public static UserConfigRouter UserConfigModule;
+    public static LinkRouter LinkingModule;
+    public static KeyValueRouter KeyValueModule;
+    public static BridgeRouter BridgeModule;
 
-    public static void start() {
-        config.setDir(Paths.get("data"));
-        config.registerFile("config", new ServerConfig());
-        config.load(true);
+    public static void start(MinecraftServer minecraftServer) {
+        LEMBackend.minecraftServer = minecraftServer;
+        config = ConfigManager.load(getBaseConfigPath().resolve("LEMBackendConfig.json"), new ServerConfig());
 
-        Mod[] modules = new Mod[]{
-                new Mod(new WhitelistModule(), new WhitelistRouter()),
-                new Mod(new UserConfigModule(), new UserConfigRouter()),
-                new Mod(new LinkingModule(), new LinkRouter()),
-                new Mod(new KeyValueModule(), new KeyValueRouter()),
-                new Mod(new AdvancementModule(), new AdvancementRouter()),
-        };
+        IO.onInitialize();
+
+        WhitelistModule = new WhitelistRouter();
+        UserConfigModule = new UserConfigRouter();
+        LinkingModule = new LinkRouter();
+        KeyValueModule = new KeyValueRouter();
+        BridgeModule = new BridgeRouter();
 
         app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
@@ -44,54 +44,54 @@ public class LEMBackend {
                 })
                 .start(getConfig().port);
 
-        for (Mod module : modules) {
-            module.module.load(gson);
-            module.router.addRoutes();
-        }
+        load(WhitelistModule);
+        load(UserConfigModule);
+        load(LinkingModule);
+        load(KeyValueModule);
+        load(BridgeModule);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    app.close();
-                    System.out.println("Exited, force saving all...");
+        System.out.println("LEMBackend server started");
+    }
 
-                    for (Mod module : modules)
-                        module.module.save(gson);
+    public static void shutdown() {
+        System.out.println("LEMBackend saving all...");
 
-                    System.out.println("Saved");
-                }, "Shutdown-thread")
-        );
+        app.stop();
 
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Server listening. Use 'stop' to quit");
+        save(WhitelistModule);
+        save(UserConfigModule);
+        save(LinkingModule);
+        save(KeyValueModule);
+        save(BridgeModule);
 
-        while (true) {
-            String input = null;
-            try {
-                input = br.readLine();
-            } catch (IOException ignored) {
-            }
-            if (input != null && input.equalsIgnoreCase("stop")) {
-                System.exit(0);
-                return;
-            }
-        }
+        System.out.println("LEMBackend all saved");
+        IO.stop();
     }
 
     public static ServerConfig getConfig() {
-        return (ServerConfig) config.getConfig("config");
+        return config;
+    }
+
+    public static Path getBaseConfigPath() {
+        return FabricLoader.getInstance().getConfigDir().resolve("LEMBackend");
     }
 
     public static boolean secretsMatch(String secret) {
         return getConfig().secretKey.equals(secret);
     }
 
-    public static class Mod {
-        Module module;
-        ModuleRouter router;
+    private static void load(ModuleRouter<?> router) {
+        router.addRoutes();
+        router.module.load();
+    }
 
-        public Mod(Module module, ModuleRouter router) {
-            this.module = module;
-            this.router = router;
-            this.router.setModule(module);
-        }
+    private static void save(ModuleRouter<?> router) {
+        router.module.save();
+    }
+
+    @Override
+    public void onInitialize() {
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> LEMBackend.shutdown());
+        ServerLifecycleEvents.SERVER_STARTED.register(LEMBackend::start);
     }
 }

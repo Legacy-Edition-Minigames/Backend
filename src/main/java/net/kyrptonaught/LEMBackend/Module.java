@@ -15,11 +15,11 @@ public class Module {
     protected final Path savePath;
 
     public Module() {
-        this(null);
+        this.savePath = LEMBackend.getBaseConfigPath();
     }
 
     public Module(String savePath) {
-        this.savePath = Path.of(savePath);
+        this.savePath = LEMBackend.getBaseConfigPath().resolve(savePath);
     }
 
     protected void save() {

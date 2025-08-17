@@ -19,38 +19,47 @@ public class LinkingModule extends Module {
 
     private final List<Link> links = Collections.synchronizedList(new ArrayList<>());
     private final ConcurrentHashMap<String, Link> mcToLinks = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Link> discordToLinks = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, LinkInProgress> linksInProgress = new ConcurrentHashMap<>();
 
     private final HashSet<String> sussies = new HashSet<>();
 
     public LinkingModule() {
-        super("data/links");
+        super("links");
     }
 
-    public void startLink(String linkID, String mcUUID) {
-        linksInProgress.put(linkID, new LinkInProgress(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), mcUUID));
+    public void startLink(String linkID, String mcUUID, String server) {
+        linksInProgress.put(linkID, new LinkInProgress(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), mcUUID, server));
     }
 
-    public String finishLink(String linkID, String discordID) {
+    public Link finishLink(String linkID, String discordID) {
         LinkInProgress link = linksInProgress.remove(linkID);
 
         if (link != null) {
-            addLink(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), link.mcUUID, discordID);
+            Link link2 = addLink(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), link.mcUUID, discordID, link.server);
             saveLinks();
-            return link.mcUUID;
+            return link2;
         }
         return null;
     }
 
-    public void addLink(String dateLinked, String mcUUID, String discordID) {
-        if (mcToLinks.containsKey(mcUUID) || discordToLinks.containsKey(discordID))
-            return;
-        Link link = new Link(dateLinked, mcUUID, discordID);
+    public Link addLink(String dateLinked, String mcUUID, String discordID, String server) {
+        if (mcToLinks.containsKey(mcUUID))
+            return mcToLinks.get(mcUUID);
+        Link link = new Link(dateLinked, mcUUID, discordID, server);
         links.add(link);
         mcToLinks.put(mcUUID, link);
-        discordToLinks.put(discordID, link);
+        return link;
+    }
+
+    public boolean isLinked(String mcUUID) {
+        return mcToLinks.containsKey(mcUUID);
+    }
+
+    public String getDiscordLink(String mcUUID) {
+        if (isLinked(mcUUID))
+            return mcToLinks.get(mcUUID).discordID;
+        return null;
     }
 
     public void addSus(String mcUUID) {
@@ -59,7 +68,7 @@ public class LinkingModule extends Module {
     }
 
     public boolean isSus(String mcUUID) {
-        return sussies.contains(mcUUID);
+        return sussies.contains(mcUUID.replaceAll("-", ""));
     }
 
     public void removeSus(String mcUUID) {
@@ -75,7 +84,8 @@ public class LinkingModule extends Module {
         if (linkJson != null)
             for (JsonElement item : linkJson) {
                 JsonObject link = item.getAsJsonObject();
-                addLink(link.get("dateLinked").getAsString(), link.get("mcUUID").getAsString(), link.get("discordID").getAsString());
+                JsonElement server = link.get("server");
+                addLink(link.get("dateLinked").getAsString(), link.get("mcUUID").getAsString(), link.get("discordID").getAsString(), server == null ? "" : server.getAsString());
             }
 
         JsonArray susJson = readFileJson(gson, "sus.json", JsonArray.class);
@@ -100,25 +110,18 @@ public class LinkingModule extends Module {
         writeFile("sus.json", LEMBackend.gson.toJson(sussies));
     }
 
-    public static class Link {
-        private final String dateLinked;
-        private final String mcUUID;
-        private final String discordID;
-
-        public Link(String dateLinked, String mcUUID, String discordID) {
-            this.dateLinked = dateLinked;
-            this.mcUUID = mcUUID;
-            this.discordID = discordID;
-        }
+    public record Link(String dateLinked, String mcUUID, String discordID, String server) {
     }
 
     public static class LinkInProgress {
         private final String linkStarted;
         private final String mcUUID;
+        private final String server;
 
-        public LinkInProgress(String startTime, String mcUUID) {
+        public LinkInProgress(String startTime, String mcUUID, String server) {
             this.linkStarted = startTime;
             this.mcUUID = mcUUID;
+            this.server = server;
         }
     }
 }

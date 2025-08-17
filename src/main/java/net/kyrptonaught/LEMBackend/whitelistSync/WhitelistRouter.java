@@ -6,6 +6,11 @@ import net.kyrptonaught.LEMBackend.ModuleRouter;
 public class WhitelistRouter extends ModuleRouter<WhitelistModule> {
 
     @Override
+    public WhitelistModule createModule() {
+        return new WhitelistModule();
+    }
+
+    @Override
     public void addRoutes() {
         route(HTTP.GET, "/v0/{secret}/whitelist/get", this::getWhitelist);
         route(HTTP.POST, "/v0/{secret}/whitelist/add/{uuid}/{mcname}", this::addWhitelist);

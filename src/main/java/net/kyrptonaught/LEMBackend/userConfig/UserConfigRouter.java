@@ -6,6 +6,11 @@ import net.kyrptonaught.LEMBackend.ModuleRouter;
 public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
 
     @Override
+    public UserConfigModule createModule() {
+        return new UserConfigModule();
+    }
+
+    @Override
     public void addRoutes() {
         route(HTTP.GET, "/v0/{secret}/getUserConfig/{uuid}", this::getUserConfig);
         route(HTTP.POST, "/v0/{secret}/syncUserConfig/{uuid}", this::syncUserConfig);

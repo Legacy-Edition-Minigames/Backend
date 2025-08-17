@@ -13,7 +13,7 @@ public class WhitelistModule extends Module {
     public static final List<WhitelistEntry> whitelist = Collections.synchronizedList(new ArrayList<>());
 
     public WhitelistModule() {
-        super("data/whitelist");
+        super("whitelist");
     }
 
     public void add(String uuid, String name) {

@@ -6,8 +6,13 @@ import net.kyrptonaught.LEMBackend.ModuleRouter;
 public class LinkRouter extends ModuleRouter<LinkingModule> {
 
     @Override
+    public LinkingModule createModule() {
+        return new LinkingModule();
+    }
+
+    @Override
     public void addRoutes() {
-        route(HTTP.POST, "/v0/{secret}/link/start/{linkid}/{mcuuid}", this::startLink);
+        route(HTTP.POST, "/v0/{secret}/link/start/{linkid}/{mcuuid}/{server}", this::startLink);
         route(HTTP.POST, "/v0/{secret}/link/finish/{linkid}/{discordid}", this::linkPlayer);
         route(HTTP.POST, "/v0/{secret}/link/sus/add/{mcuuid}", this::addSus);
         route(HTTP.POST, "/v0/{secret}/link/sus/remove/{mcuuid}", this::removeSus);
@@ -17,8 +22,9 @@ public class LinkRouter extends ModuleRouter<LinkingModule> {
     public void startLink(Context ctx) {
         String linkID = ctx.pathParam("linkid");
         String mcUUID = ctx.pathParam("mcuuid");
+        String server = ctx.pathParam("server");
 
-        module.startLink(linkID, mcUUID);
+        module.startLink(linkID, mcUUID, server);
         ctx.result("success");
     }
 
@@ -26,9 +32,9 @@ public class LinkRouter extends ModuleRouter<LinkingModule> {
         String linkID = ctx.pathParam("linkid");
         String discordID = ctx.pathParam("discordid");
 
-        String mcUUID = module.finishLink(linkID, discordID);
-        if (mcUUID != null) {
-            ctx.result(mcUUID);
+        LinkingModule.Link link = module.finishLink(linkID, discordID);
+        if (link.mcUUID() != null) {
+            ctx.result(link.mcUUID());
             return;
         }
 

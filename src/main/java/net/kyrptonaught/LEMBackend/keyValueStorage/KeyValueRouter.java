@@ -4,6 +4,12 @@ import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
 
 public class KeyValueRouter extends ModuleRouter<KeyValueModule> {
+
+    @Override
+    public KeyValueModule createModule() {
+        return new KeyValueModule();
+    }
+
     @Override
     public void addRoutes() {
         route(HTTP.GET, "/v0/{secret}/kvs/set/{id}/{key}/{value}", this::setValue);

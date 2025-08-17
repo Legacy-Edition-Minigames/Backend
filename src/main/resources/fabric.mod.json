@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "lembackend",
+  "version": "2.0.0-1.21.8",
+  "name": "LEMBackend",
+  "description": "LEM Backend",
+  "authors": [
+    "kyrptonaught"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Legacy-Edition-Minigames/Backend",
+    "sources": "https://github.com/Legacy-Edition-Minigames/Backend"
+  },
+  "license": "PolyForm Perimeter License 1.0.0",
+  "icon": "assets/lembackend/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.kyrptonaught.LEMBackend.LEMBackend"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric": "*",
+    "java": ">=21"
+  }
+}

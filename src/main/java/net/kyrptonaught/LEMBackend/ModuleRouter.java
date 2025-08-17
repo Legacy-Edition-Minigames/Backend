@@ -1,16 +1,24 @@
 package net.kyrptonaught.LEMBackend;
 
 import io.javalin.http.Context;
+import io.javalin.websocket.WsContext;
 
 import java.util.function.Consumer;
 
-public class ModuleRouter<T extends Module> {
+public abstract class ModuleRouter<T extends Module> {
 
     protected enum HTTP {POST, GET}
 
-    protected T module;
+    public T module;
 
-    public void setModule(T module) {
+
+    public ModuleRouter() {
+        setModule(createModule());
+    }
+
+    protected abstract T createModule();
+
+    private void setModule(T module) {
         this.module = module;
     }
 
@@ -29,5 +37,9 @@ public class ModuleRouter<T extends Module> {
             return;
         }
         ctx.status(500).result("failed");
+    }
+
+    public boolean checkSecret(WsContext ctx) {
+        return LEMBackend.secretsMatch(ctx.pathParam("secret"));
     }
 }
