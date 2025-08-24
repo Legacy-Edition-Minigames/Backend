@@ -3,6 +3,7 @@ package net.kyrptonaught.LEMBackend;
 import com.google.gson.Gson;
 import io.javalin.Javalin;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.kyrptonaught.LEMBackend.config.ConfigManager;
@@ -12,6 +13,7 @@ import net.kyrptonaught.LEMBackend.linking.LinkRouter;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
 import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistRouter;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.Identifier;
 
 import java.nio.file.Path;
 
@@ -26,8 +28,7 @@ public class LEMBackend implements ModInitializer {
     public static KeyValueRouter KeyValueModule;
     public static BridgeRouter BridgeModule;
 
-    public static void start(MinecraftServer minecraftServer) {
-        LEMBackend.minecraftServer = minecraftServer;
+    public static void start() {
         config = ConfigManager.load(getBaseConfigPath().resolve("LEMBackendConfig.json"), new ServerConfig());
 
         IO.onInitialize();
@@ -91,7 +92,11 @@ public class LEMBackend implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> LEMBackend.shutdown());
-        ServerLifecycleEvents.SERVER_STARTED.register(LEMBackend::start);
+        start();
+        ServerLifecycleEvents.SERVER_STARTED.addPhaseOrdering(Identifier.of("lembackend", "start"), Event.DEFAULT_PHASE);
+        ServerLifecycleEvents.SERVER_STARTED.register(Identifier.of("lembackend", "start"), server -> LEMBackend.minecraftServer = server);
+
+        ServerLifecycleEvents.SERVER_STOPPED.addPhaseOrdering(Event.DEFAULT_PHASE, Identifier.of("lembackend", "stop"));
+        ServerLifecycleEvents.SERVER_STOPPED.register(Identifier.of("lembackend", "stop"), server -> LEMBackend.shutdown());
     }
 }
