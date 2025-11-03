@@ -3,15 +3,17 @@ package net.kyrptonaught.LEMBackend.discordBridge.linking;
 import com.google.gson.JsonObject;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.interactions.components.text.TextInput;
-import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
-import net.dv8tion.jda.api.interactions.modals.Modal;
+import net.dv8tion.jda.api.modals.Modal;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.WebhookSender;
@@ -36,18 +38,20 @@ public class LinkingManager {
                 .build();
 
         jda.getTextChannelById(channel).sendMessageEmbeds(Collections.singleton(embed))
-                .addActionRow(Button.primary("link:start", "Link"))
+                .addComponents(ActionRow.of(Button.primary("link:start", "Link")))
                 .queue();
     }
 
     public static void displayLinkInput(ButtonInteractionEvent event) {
-        TextInput input = TextInput.create("link:input", "Link Code", TextInputStyle.SHORT)
+        TextInput input = TextInput.create("link:input", TextInputStyle.SHORT)
+                .setPlaceholder("Link Code")
                 .setRequired(true)
                 .setMinLength(5)
                 .setMaxLength(5)
                 .build();
 
-        event.replyModal(Modal.create("link:modal", "Enter your Link code").addActionRow(input).build()).queue();
+        event.replyModal(Modal.create("link:modal", "Enter your Link code")
+                .addComponents(Label.of("Link Code:", input)).build()).queue();
     }
 
     public static void linkInputResults(ModalInteractionEvent event) {

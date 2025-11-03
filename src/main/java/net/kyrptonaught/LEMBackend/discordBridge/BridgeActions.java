@@ -41,7 +41,7 @@ public class BridgeActions {
         try {
             Category category = jda.getCategoryById(bridgeCategoryID);
             for (TextChannel channel : category.getTextChannels())
-                if (channel.getName().equalsIgnoreCase(name)) return channel;
+                if (channel.getName().equals(name)) return channel;
 
             return category.createTextChannel(name).submit().get();
         } catch (Exception e) {

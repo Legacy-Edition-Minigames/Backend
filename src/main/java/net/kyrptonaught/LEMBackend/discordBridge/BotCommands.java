@@ -24,9 +24,9 @@ public class BotCommands {
 
     public static void registerCommands(JDA jda) {
         jda.updateCommands().addCommands(
-                Commands.slash("info", "Get the server info").setGuildOnly(true),
-                Commands.slash("sus", "Mark a player as suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username").setGuildOnly(true),
-                Commands.slash("unsus", "Mark a player as no longer suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username").setGuildOnly(true)
+                Commands.slash("info", "Get the server info"),
+                Commands.slash("sus", "Mark a player as suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username"),
+                Commands.slash("unsus", "Mark a player as no longer suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username")
         ).queue();
     }
 
@@ -48,7 +48,7 @@ public class BotCommands {
     }
 
     public static void buttonPressed(JDA jda, @NotNull ButtonInteractionEvent event) {
-        if (event.getButton().getId().equals("link:start")) {
+        if (event.getButton().getCustomId().equals("link:start")) {
             LinkingManager.displayLinkInput(event);
         }
     }
