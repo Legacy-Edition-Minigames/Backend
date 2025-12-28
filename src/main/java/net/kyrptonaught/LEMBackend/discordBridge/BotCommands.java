@@ -3,9 +3,16 @@ package net.kyrptonaught.LEMBackend.discordBridge;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
+import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
+import net.dv8tion.jda.api.components.separator.Separator;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -14,10 +21,14 @@ import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.kyrptonaught.LEMBackend.IO;
 import net.kyrptonaught.LEMBackend.LEMBackend;
+import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
 import net.kyrptonaught.LEMBackend.discordBridge.linking.LinkingManager;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.text.TextCodecs;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class BotCommands {
@@ -88,6 +99,32 @@ public class BotCommands {
                         .addField("MSPT", String.format("%.2f", serverTickTime), true)
                         .addField("RAM", used_ram + "MB / " + total_memory / 1024 / 1024 + "MB", true)
                         .build()).queue();
+    }
+
+    public static void gameStartInfo(JDA jda, long channelID, JsonObject obj) {
+        String mapName = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("map_name")).result().get(), true);
+        List<ContainerChildComponent> container = new ArrayList<>();
+
+        container.add(TextDisplay.ofFormat("# %s\n-# %s", mapName, obj.get("map_size").getAsString()));
+        container.add(MediaGallery.of(MediaGalleryItem.fromUrl("https://raw.githubusercontent.com/Team-Lodestone/Documentation/refs/heads/main/LCE/Game/BattleMapImages/" + mapName + ".png")));
+        container.add(TextDisplay.ofFormat("> Players: %s/16\n> Spectators: %s/16", obj.get("player_count").getAsString(), obj.get("spectator_count").getAsString()));
+        container.add(Separator.createDivider(Separator.Spacing.SMALL));
+
+        JsonArray rules = obj.getAsJsonArray("changed_rules");
+        if (rules.isEmpty()) {
+            container.add(TextDisplay.of("### Default Rules"));
+        } else {
+            StringBuilder str = new StringBuilder("### Changed Rules:");
+            for (JsonElement entry : rules.asList()) {
+                String key = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("key")).result().get(), true);
+                String value = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("value")).result().get(), true);
+                str.append("\n- **" + key + "**: " + value);
+            }
+            container.add(TextDisplay.of(str.toString()));
+        }
+
+        jda.getTextChannelById(channelID).sendMessage("Starting Game:").queue();
+        jda.getTextChannelById(channelID).sendMessageComponents(Container.of(container)).useComponentsV2().queue();
     }
 
     public static void susCommandExecute(String mcName, Consumer<String> result) {

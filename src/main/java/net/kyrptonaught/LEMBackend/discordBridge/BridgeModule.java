@@ -138,6 +138,8 @@ public class BridgeModule extends Module {
         } else if (obj.get("type").getAsString().equals("info_reply")) {
             BotCommands.infoCommandResponse(obj, servers.get(bridge).infoCommandInteraction);
             servers.get(bridge).infoCommandInteraction = null;
+        } else if (obj.get("type").getAsString().equals("game_start_info")) {
+            BotCommands.gameStartInfo(jda, servers.get(bridge).discordChannelID, obj);
         }
     }
 
