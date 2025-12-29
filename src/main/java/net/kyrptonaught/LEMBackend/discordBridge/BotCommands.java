@@ -81,23 +81,39 @@ public class BotCommands {
         double serverTickTime = average(obj.get("server_tick_times").getAsJsonArray()) * 1.0E-6D;
         long total_memory = obj.get("total_memory").getAsLong();
         long free_memory = obj.get("free_memory").getAsLong();
-        long used_ram = (total_memory - free_memory) / 1024 / 1024;
 
-        StringBuilder playerString = new StringBuilder();
+        int playerCount = 0;
+        int spectatorCount = 0;
+
+        StringBuilder playerString = new StringBuilder("```css\n");
+        StringBuilder spectatorString = new StringBuilder("```css\n");
         JsonArray players = obj.getAsJsonArray("players");
-        playerString.append("```css\n").append("Online Players (").append(players.size()).append("/").append(obj.get("max_players").getAsInt()).append(")\n");
-        for (JsonElement player : players)
-            playerString.append("[").append(player.getAsJsonObject().get("latency").getAsInt()).append("ms] ").append(player.getAsJsonObject().get("name").getAsString()).append("\n");
+
+        for (JsonElement player : players) {
+            if (player.getAsJsonObject().get("isSpectator").getAsBoolean()) {
+                spectatorCount++;
+                spectatorString.append("[").append(player.getAsJsonObject().get("latency").getAsInt()).append("ms] ").append(player.getAsJsonObject().get("name").getAsString()).append("\n");
+            } else {
+                playerCount++;
+                playerString.append("[").append(player.getAsJsonObject().get("latency").getAsInt()).append("ms] ").append(player.getAsJsonObject().get("name").getAsString()).append("\n");
+            }
+        }
+        if (playerCount == 0) playerString.append("None");
+        if (spectatorCount == 0) spectatorString.append("None");
         playerString.append("```");
+        spectatorString.append("```");
 
         event.getHook().editOriginalEmbeds(
                 new EmbedBuilder()
                         .setTitle("Server Status")
-                        .setDescription(playerString.toString())
                         .setColor(0x00aaff)
-                        .addField("TPS", String.format("%.2f", Math.min(1000.0 / serverTickTime, 20)), true)
-                        .addField("MSPT", String.format("%.2f", serverTickTime), true)
-                        .addField("RAM", used_ram + "MB / " + total_memory / 1024 / 1024 + "MB", true)
+                        .addField("Players (" + playerCount + "/" + obj.get("player_count").getAsInt() + ")", playerString.toString(), true)
+                        .addField("Spectators (" + spectatorCount + "/" + obj.get("spectator_count").getAsInt() + ")", spectatorString.toString(), true)
+                        .addField("",
+                                "- **TPS**: " + String.format("%.2f", Math.min(1000.0 / serverTickTime, 20)) +
+                                        "\n- **MSPT**: " + String.format("%.2f", serverTickTime) +
+                                        "\n- **RAM**: " + (100 - (int) ((double) free_memory / total_memory * 100)) + "%"
+                                , false)
                         .build()).queue();
     }
 
@@ -107,7 +123,7 @@ public class BotCommands {
 
         container.add(TextDisplay.ofFormat("# %s\n-# %s", mapName, obj.get("map_size").getAsString()));
         container.add(MediaGallery.of(MediaGalleryItem.fromUrl("https://raw.githubusercontent.com/Team-Lodestone/Documentation/refs/heads/main/LCE/Game/BattleMapImages/" + mapName + ".png")));
-        container.add(TextDisplay.ofFormat("> Players: %s/16\n> Spectators: %s/16", obj.get("player_count").getAsString(), obj.get("spectator_count").getAsString()));
+        container.add(TextDisplay.ofFormat("> Players: %s\n> Spectators: %s", obj.get("player_count").getAsString(), obj.get("spectator_count").getAsString()));
         container.add(Separator.createDivider(Separator.Spacing.SMALL));
 
         JsonArray rules = obj.getAsJsonArray("changed_rules");
@@ -159,5 +175,4 @@ public class BotCommands {
         }
         return (double) l / (double) array.size();
     }
-
 }
