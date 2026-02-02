@@ -1,6 +1,5 @@
 package net.kyrptonaught.LEMBackend.discordBridge;
 
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
@@ -12,10 +11,6 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
-import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
-import net.dv8tion.jda.api.utils.messages.MessageCreateData;
-
-import java.util.Collections;
 
 public class BridgeActions {
 
@@ -62,24 +57,6 @@ public class BridgeActions {
         }
 
         return null;
-    }
-
-    public static void sendMessage(JDA jda, long channel, String msg, boolean mentions) {
-        MessageCreateData message = new MessageCreateBuilder()
-                .setContent(msg)
-                .setAllowedMentions(mentions ? null : Collections.emptyList())
-                .build();
-
-        jda.getTextChannelById(channel).sendMessage(message).queue();
-    }
-
-    public static void sendEmbed(JDA jda, long channel, String title, String msg, int hexColor) {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        if (title != null) embedBuilder.setTitle(title);
-        if (hexColor != 0) embedBuilder.setColor(hexColor);
-        embedBuilder.setDescription(msg);
-
-        jda.getTextChannelById(channel).sendMessageEmbeds(embedBuilder.build()).queue();
     }
 
     public static void lockChannel(JDA jda, long channel, long linkRoleID, boolean locked) {

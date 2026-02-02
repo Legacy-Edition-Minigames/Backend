@@ -19,6 +19,7 @@
       "net.kyrptonaught.LEMBackend.LEMBackend"
     ]
   },
+  "accessWidener": "lembackend.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.14",
     "fabric": "*",

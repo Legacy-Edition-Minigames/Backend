@@ -9,9 +9,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.kyrptonaught.LEMBackend.config.ConfigManager;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeRouter;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
-import net.kyrptonaught.LEMBackend.linking.LinkRouter;
+import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorRouter;
+import net.kyrptonaught.LEMBackend.resourcer.ResourcerRouter;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
-import net.kyrptonaught.LEMBackend.whitelistSync.WhitelistRouter;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 
@@ -22,22 +22,22 @@ public class LEMBackend implements ModInitializer {
     public static Gson gson = ConfigManager.getGSON();
     public static Javalin app;
     public static MinecraftServer minecraftServer;
-    public static WhitelistRouter WhitelistModule;
+    public static ProhibitorRouter ProhibitorModule;
     public static UserConfigRouter UserConfigModule;
-    public static LinkRouter LinkingModule;
     public static KeyValueRouter KeyValueModule;
     public static BridgeRouter BridgeModule;
+    public static ResourcerRouter ResourcerModule;
 
     public static void start() {
         config = ConfigManager.load(getBaseConfigPath().resolve("LEMBackendConfig.json"), new ServerConfig());
 
         IO.onInitialize();
 
-        WhitelistModule = new WhitelistRouter();
+        ProhibitorModule = new ProhibitorRouter();
         UserConfigModule = new UserConfigRouter();
-        LinkingModule = new LinkRouter();
         KeyValueModule = new KeyValueRouter();
         BridgeModule = new BridgeRouter();
+        ResourcerModule = new ResourcerRouter();
 
         app = Javalin.create((javalinConfig) -> {
                     javalinConfig.showJavalinBanner = false;
@@ -45,11 +45,12 @@ public class LEMBackend implements ModInitializer {
                 })
                 .start(getConfig().port);
 
-        load(WhitelistModule);
+        load(ProhibitorModule);
         load(UserConfigModule);
-        load(LinkingModule);
         load(KeyValueModule);
         load(BridgeModule);
+        load(ResourcerModule);
+        ResourcerModule.module.injectTranslations();
 
         System.out.println("LEMBackend server started");
     }
@@ -59,11 +60,11 @@ public class LEMBackend implements ModInitializer {
 
         app.stop();
 
-        save(WhitelistModule);
+        save(ProhibitorModule);
         save(UserConfigModule);
-        save(LinkingModule);
         save(KeyValueModule);
         save(BridgeModule);
+        save(ResourcerModule);
 
         System.out.println("LEMBackend all saved");
         IO.stop();

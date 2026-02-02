@@ -31,11 +31,9 @@ public class Module {
     }
 
     public void save(Gson gson) {
-
     }
 
     public void load(Gson gson) {
-
     }
 
     public <T> T readFileJson(Gson gson, String file, Class<T> clazz) {
@@ -49,6 +47,10 @@ public class Module {
             }
         }
         return null;
+    }
+
+    public void writeFileJson(Gson gson, String file, Object clazz) {
+        writeFile(file, gson.toJson(clazz));
     }
 
     public void writeFile(String file, String data) {

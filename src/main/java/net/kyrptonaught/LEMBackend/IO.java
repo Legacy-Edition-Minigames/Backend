@@ -91,4 +91,12 @@ public class IO {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
     }
+
+    public static String getApiUrl(String module) {
+        return getApiURL() + "/" + module;
+    }
+
+    private static String getApiURL() {
+        return "http://localhost:" + LEMBackend.getConfig().port + "/v0/" + LEMBackend.getConfig().secretKey;
+    }
 }

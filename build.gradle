@@ -2,7 +2,7 @@ import net.fabricmc.loom.task.RemapJarTask
 plugins {
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
-	id 'com.gradleup.shadow' version '9.3.0'
+	id 'com.gradleup.shadow' version '9.3.1'
 }
 
 version = project.mod_version
@@ -18,13 +18,17 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_version}")
+	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
 
 	//Discord Bridge
-	shadow implementation("net.dv8tion:JDA:6.2.0") { exclude module: 'opus-java' }
+	shadow implementation("net.dv8tion:JDA:6.3.0") { exclude module: 'opus-java' }
 
 	//Javalin
 	shadow implementation("io.javalin:javalin:6.7.0")
+}
+
+loom {
+	accessWidenerPath = file("src/main/resources/lembackend.accesswidener")
 }
 
 configurations {

@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Type;
 
-
 public class GsonMapper implements JsonMapper {
     private final Gson gson;
 

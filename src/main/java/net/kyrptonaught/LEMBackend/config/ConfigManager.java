@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 
 public class ConfigManager {
     public static Path dir;
@@ -19,6 +20,7 @@ public class ConfigManager {
             .setPrettyPrinting()
             .setStrictness(Strictness.LENIENT)
             .registerTypeAdapter(Identifier.class, new IdentifierSerializer())
+            .registerTypeAdapter(Instant.class, new InstantSerializer())
             .create();
 
 
@@ -66,6 +68,16 @@ public class ConfigManager {
 
         public JsonElement serialize(Identifier identifier, Type type, JsonSerializationContext jsonSerializationContext) {
             return new JsonPrimitive(identifier.toString());
+        }
+    }
+
+    private static class InstantSerializer implements JsonSerializer<Instant>, JsonDeserializer<Instant> {
+        public Instant deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            return Instant.parse(json.getAsString());
+        }
+
+        public JsonElement serialize(Instant instant, Type type, JsonSerializationContext JsonDeserializationContext) {
+            return new JsonPrimitive(instant.toString());
         }
     }
 }

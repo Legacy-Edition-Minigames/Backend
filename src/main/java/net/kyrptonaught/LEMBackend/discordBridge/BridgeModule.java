@@ -1,26 +1,24 @@
 package net.kyrptonaught.LEMBackend.discordBridge;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
+import io.javalin.websocket.WsCloseContext;
 import io.javalin.websocket.WsContext;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
-import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
-import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToMC;
-import net.kyrptonaught.LEMBackend.discordBridge.linking.LinkingManager;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.util.Formatting;
-import org.jetbrains.annotations.NotNull;
+import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BridgeModule extends Module {
     public static DiscordBridgeConfig config;
     public static final Map<String, ServerInfo> servers = new ConcurrentHashMap<>();
-    private JDA jda;
+    public static JDA jda;
 
     public BridgeModule() {
         super("discordBridge");
@@ -60,6 +58,10 @@ public class BridgeModule extends Module {
         servers.put(bridge, new ServerInfo(ctx, channel.getIdLong(), webhook.getUrl()));
     }
 
+    public void removeServer(WsCloseContext ctx) {
+        servers.values().removeIf(serverInfo -> serverInfo.socketConnection.sessionId().equals(ctx.sessionId()));
+    }
+
     public void buildBot() {
         if (config.botToken == null)
             return;
@@ -67,83 +69,42 @@ public class BridgeModule extends Module {
         jda = BridgeActions.create(config.botToken, config.playingStatus);
         jda.addEventListener(new ListenerAdapter() {
             @Override
-            public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-                onDiscordMessage(event);
+            public void onMessageReceived(MessageReceivedEvent event) {
+                BridgeOut.onDiscordMessage(event);
             }
 
             @Override
-            public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
+            public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
                 BotCommands.execute(jda, event);
             }
 
             @Override
-            public void onModalInteraction(@NotNull ModalInteractionEvent event) {
+            public void onModalInteraction(ModalInteractionEvent event) {
                 BotCommands.modalInteraction(jda, event);
             }
 
             @Override
-            public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
+            public void onButtonInteraction(ButtonInteractionEvent event) {
                 BotCommands.buttonPressed(jda, event);
             }
+
+            @Override
+            public void onMessageContextInteraction(MessageContextInteractionEvent event) {
+                System.out.println("message context");
+            }
+
+            @Override
+            public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+                BotCommands.selectInteraction(jda, event);
+            }
+
         });
         BotCommands.registerCommands(jda);
         LinkingManager.prepareChannel(jda, config.linkChannelID);
     }
 
 
-    public void onDiscordMessage(MessageReceivedEvent event) {
-        if (event != null && shouldRespondToMessage(event)) {
-            if (event.getMessage().getReferencedMessage() != null) {
-                Text message = FormatToMC.parseMessage(event.getMessage().getReferencedMessage(), Text.literal("    ┌──── ").formatted(Formatting.GRAY), false);
-                sendMessageToServer(event.getChannel().getName(), message);
-            }
-
-            Role adminMessageRole = event.getGuild().getRoleById(config.adminMessageRoleID);
-            boolean admin = event.getMember().getRoles().contains(adminMessageRole);
-
-            Text message = FormatToMC.parseMessage(event.getMessage(), Text.literal("[Discord] ").formatted(Formatting.BLUE), admin);
-            if (message != null)
-                sendMessageToServer(event.getChannel().getName(), message);
-        }
-    }
-
-    public void sendMessageToServer(String bridge, Text message) {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("type", "chat");
-        encodeText(obj, "msg", message);
-        sendMessageToServer(bridge, obj);
-    }
-
-    public void sendMessageToServer(String bridge, JsonObject obj) {
-        servers.get(bridge).send(obj);
-    }
-
-    public void onMinecraftMessage(String bridge, JsonObject obj) {
-        if (obj.get("type").getAsString().equals("chat")) {
-            Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
-            String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
-            WebhookSender.sendMessage(servers.get(bridge).discordChannelWebhook, obj.get("display_name").getAsString(), FormatToDiscord.getUserHeadURL(config.playerSkinURL, obj.get("display_name").getAsString(), obj.get("display_name").getAsString()), msg);
-        } else if (obj.get("type").getAsString().equals("game")) {
-            Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
-            String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
-            BridgeActions.sendEmbed(jda, servers.get(bridge).discordChannelID, null, msg, obj.get("color").getAsInt());
-        } else if (obj.get("type").getAsString().equals("log")) {
-            WebhookSender.log(config.loggingWebhookURL, obj.get("server_name").getAsString(), obj.get("msg").getAsString());
-        } else if (obj.get("type").getAsString().equals("log_text")) {
-            Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
-            String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
-            WebhookSender.logMention(config.loggingWebhookURL, obj.get("server_name").getAsString(), msg, config.moderatorRoleID, true);
-        } else if (obj.get("type").getAsString().equals("lock")) {
-            BridgeActions.lockChannel(jda, servers.get(bridge).discordChannelID, config.linkRoleID, obj.get("locked").getAsBoolean());
-        } else if (obj.get("type").getAsString().equals("info_reply")) {
-            BotCommands.infoCommandResponse(obj, servers.get(bridge).infoCommandInteraction);
-            servers.get(bridge).infoCommandInteraction = null;
-        } else if (obj.get("type").getAsString().equals("game_start_info")) {
-            BotCommands.gameStartInfo(jda, servers.get(bridge).discordChannelID, obj);
-        }
-    }
-
-    public PatreonTier getPatreonTier(String discordID) {
+    public PatreonTier getPatreonTier(long discordID) {
         Guild guild = jda.getGuildById(config.discordServerID);
         if (guild != null) {
             Member member = guild.getMemberById(discordID);
@@ -166,20 +127,5 @@ public class BridgeModule extends Module {
         Role role = member.getGuild().getRoleById(roleID);
         if (role == null) return false;
         return member.getUnsortedRoles().contains(role);
-    }
-
-    private boolean shouldRespondToMessage(MessageReceivedEvent event) {
-        return (event.getMessage().getType() == MessageType.DEFAULT || event.getMessage().getType() == MessageType.INLINE_REPLY) &&
-                !event.isWebhookMessage() &&
-                event.getAuthor().getIdLong() != jda.getSelfUser().getIdLong() &&
-                (isAllowedChannel(event.getChannel().getName()));
-    }
-
-    public boolean isAllowedChannel(String channel) {
-        return servers.containsKey(channel);
-    }
-
-    private static void encodeText(JsonObject obj, String name, Text text) {
-        obj.add(name, TextCodecs.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow());
     }
 }

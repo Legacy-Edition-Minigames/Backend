@@ -1,4 +1,4 @@
-package net.kyrptonaught.LEMBackend.discordBridge.linking;
+package net.kyrptonaught.LEMBackend.prohibitor.linking;
 
 import com.google.gson.JsonObject;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -16,12 +16,46 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
 import net.kyrptonaught.LEMBackend.discordBridge.WebhookSender;
-import net.kyrptonaught.LEMBackend.linking.LinkingModule;
 
 import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LinkingManager {
+    private static final ConcurrentHashMap<Long, String> discordLinks = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, LinkInProgress> linksInProgress = new ConcurrentHashMap<>();
+
+    public static void startLink(String linkID, String mcUUID, String source) {
+        linksInProgress.put(linkID, new LinkInProgress(mcUUID, source));
+    }
+
+    public static LinkInProgress finishLink(String linkID, long discordID) {
+        LinkInProgress link = linksInProgress.remove(linkID);
+
+        if (link != null) {
+            LEMBackend.ProhibitorModule.module.link(link.mcUUID, discordID, link.source);
+            discordLinks.put(discordID, link.mcUUID);
+            LEMBackend.ProhibitorModule.module.save(LEMBackend.gson);
+            return link;
+        }
+
+        return null;
+    }
+
+    public static String getMCFromDiscord(long discordID) {
+        return discordLinks.get(discordID);
+    }
+
+    public static Map<Long, String> getSave() {
+        return discordLinks;
+    }
+
+    public static void load(Map<Long, String> discordLinks) {
+        if (discordLinks != null && !discordLinks.isEmpty())
+            LinkingManager.discordLinks.putAll(discordLinks);
+    }
 
     public static void prepareChannel(JDA jda, long channel) {
         if (channel == 0 || jda == null) return;
@@ -56,9 +90,9 @@ public class LinkingManager {
 
     public static void linkInputResults(ModalInteractionEvent event) {
         String linkID = event.getValue("link:input").getAsString();
-        String discordID = event.getInteraction().getMember().getId();
+        long discordID = event.getInteraction().getMember().getIdLong();
 
-        LinkingModule.Link link = LEMBackend.LinkingModule.module.finishLink(linkID, discordID);
+        LinkInProgress link = finishLink(linkID, discordID);
         if (link == null) {
             event.reply("An error occurred. Is the code correct?").setEphemeral(true).queue();
             return;
@@ -77,6 +111,9 @@ public class LinkingManager {
         LEMBackend.UserConfigModule.module.integrations(link.mcUUID(), integrations);
         obj.add("integrations", integrations);
 
-        LEMBackend.BridgeModule.module.sendMessageToServer(link.server(), obj);
+        BridgeOut.sendMessageToServer(link.source(), obj);
+    }
+
+    public record LinkInProgress(String mcUUID, String source) {
     }
 }

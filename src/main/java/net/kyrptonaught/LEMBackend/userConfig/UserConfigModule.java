@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
 import net.kyrptonaught.LEMBackend.discordBridge.PatreonTier;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 
 public class UserConfigModule extends Module {
 
@@ -31,16 +32,16 @@ public class UserConfigModule extends Module {
     }
 
     public void integrations(String player, JsonObject obj) {
-        boolean sus = LEMBackend.LinkingModule.module.isSus(player);
-        String discordID = LEMBackend.LinkingModule.module.getDiscordLink(player);
+        PlayerEntry playerEntry = LEMBackend.ProhibitorModule.module.loadPlayer(player);
 
-        obj.addProperty("lem.base:suspicious", sus);
-        if (discordID == null) {
+        obj.addProperty("lem.base:muted", !LEMBackend.ProhibitorModule.module.canPlayerChat(player));
+        obj.addProperty("lem.base:suspicious", playerEntry.sussyStatus != null);
+        if (playerEntry.discordLink == null) {
             obj.addProperty("lem.base:discord_linked", false);
             obj.addProperty("lem.base:patreon_tier", PatreonTier.NONE.toString());
         } else {
             obj.addProperty("lem.base:discord_linked", true);
-            obj.addProperty("lem.base:patreon_tier", LEMBackend.BridgeModule.module.getPatreonTier(discordID).toString());
+            obj.addProperty("lem.base:patreon_tier", LEMBackend.BridgeModule.module.getPatreonTier(playerEntry.discordLink.discordID()).toString());
         }
     }
 }

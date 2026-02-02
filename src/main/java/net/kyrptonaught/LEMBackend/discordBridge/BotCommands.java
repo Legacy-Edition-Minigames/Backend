@@ -6,7 +6,6 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
@@ -15,29 +14,25 @@ import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.kyrptonaught.LEMBackend.IO;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
-import net.kyrptonaught.LEMBackend.discordBridge.linking.LinkingManager;
+import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
+import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.TextCodecs;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class BotCommands {
 
     public static void registerCommands(JDA jda) {
         jda.updateCommands().addCommands(
                 Commands.slash("info", "Get the server info"),
-                Commands.slash("sus", "Mark a player as suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username"),
-                Commands.slash("unsus", "Mark a player as no longer suspicious").setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.BAN_MEMBERS)).addOption(OptionType.STRING, "mcname", "MC Username")
+                ProhibitorDiscordCommands.register()
         ).queue();
     }
 
@@ -45,29 +40,29 @@ public class BotCommands {
         MinecraftServer server = LEMBackend.minecraftServer;
         switch (event.getName()) {
             case "info" -> infoCommandExecute(server, event);
-            case "sus" -> {
-                event.deferReply().queue();
-                String mcname = event.getOption("mcname").getAsString();
-                susCommandExecute(mcname, (result) -> event.getHook().editOriginal(result).queue());
-            }
-            case "unsus" -> {
-                event.deferReply().queue();
-                String mcname = event.getOption("mcname").getAsString();
-                unsusCommandExecute(mcname, (result) -> event.getHook().editOriginal(result).queue());
-            }
+            case "prohibitor" -> ProhibitorDiscordCommands.execute(event);
         }
     }
 
-    public static void buttonPressed(JDA jda, @NotNull ButtonInteractionEvent event) {
+    public static void buttonPressed(JDA jda, ButtonInteractionEvent event) {
+        if (event.getCustomId().startsWith("prohibitor:"))
+            ProhibitorDiscordCommands.buttonInteraction(event);
         if (event.getButton().getCustomId().equals("link:start")) {
             LinkingManager.displayLinkInput(event);
         }
     }
 
     public static void modalInteraction(JDA jda, ModalInteractionEvent event) {
+        if (event.getCustomId().startsWith("prohibitor:"))
+            ProhibitorDiscordCommands.modalSubmit(event);
         if (event.getModalId().equals("link:modal")) {
             LinkingManager.linkInputResults(event);
         }
+    }
+
+    public static void selectInteraction(JDA jda, StringSelectInteractionEvent event) {
+        if (event.getCustomId().startsWith("prohibitor:"))
+            ProhibitorDiscordCommands.selectInteraction(event);
     }
 
     public static void infoCommandExecute(MinecraftServer server, SlashCommandInteraction event) {
@@ -141,31 +136,6 @@ public class BotCommands {
 
         jda.getTextChannelById(channelID).sendMessage("Starting Game:").queue();
         jda.getTextChannelById(channelID).sendMessageComponents(Container.of(container)).useComponentsV2().queue();
-    }
-
-    public static void susCommandExecute(String mcName, Consumer<String> result) {
-        String responseUUID = IO.getValue("https://api.mojang.com/users/profiles/minecraft/" + mcName, "id");
-
-        if (responseUUID == null) {
-            result.accept("Invalid MC Name");
-            return;
-        }
-
-        LEMBackend.LinkingModule.module.addSus(responseUUID);
-        result.accept("Added **" + mcName + "** as a suspicious player");
-        WebhookSender.log(BridgeModule.config.loggingWebhookURL, "Suspicious", "Added **" + mcName + "** as a suspicious player");
-    }
-
-    public static void unsusCommandExecute(String mcName, Consumer<String> result) {
-        String responseUUID = IO.getValue("https://api.mojang.com/users/profiles/minecraft/" + mcName, "id");
-
-        if (responseUUID == null) {
-            result.accept("Invalid MC Name");
-            return;
-        }
-        LEMBackend.LinkingModule.module.removeSus(responseUUID);
-        result.accept("Removed **" + mcName + "** as a suspicious player");
-        WebhookSender.log(BridgeModule.config.loggingWebhookURL, "Suspicious", "Removed **" + mcName + "** as a suspicious player");
     }
 
     private static double average(JsonArray array) {

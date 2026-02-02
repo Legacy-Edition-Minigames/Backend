@@ -24,9 +24,8 @@ public class BridgeRouter extends ModuleRouter<BridgeModule> {
                 ctx.session.setIdleTimeout(Duration.ofDays(1));
                 module.registerServer(ctx.pathParam("bridge"), ctx);
             });
-            ws.onMessage(ctx -> module.onMinecraftMessage(ctx.pathParam("bridge"), ctx.messageAsClass(JsonObject.class)));
-            ws.onClose(ctx -> {
-            });
+            ws.onMessage(ctx -> BridgeIn.onMessage(ctx.pathParam("bridge"), ctx.messageAsClass(JsonObject.class)));
+            ws.onClose(ctx -> module.removeServer(ctx));
             ws.onError(ctx -> ctx.error().printStackTrace());
         });
     }
