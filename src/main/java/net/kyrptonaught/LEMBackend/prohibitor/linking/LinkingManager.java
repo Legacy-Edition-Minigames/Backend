@@ -18,6 +18,7 @@ import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
 import net.kyrptonaught.LEMBackend.discordBridge.WebhookSender;
+import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
 
 import java.util.Collections;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class LinkingManager {
         LinkInProgress link = linksInProgress.remove(linkID);
 
         if (link != null) {
-            LEMBackend.ProhibitorModule.module.link(link.mcUUID, discordID, link.source);
+            ProhibitorExecuter.link(link.mcUUID, discordID, link.source);
             discordLinks.put(discordID, link.mcUUID);
             LEMBackend.ProhibitorModule.module.save(LEMBackend.gson);
             return link;

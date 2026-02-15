@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 
 public class IO {
     private static ExecutorService executorService;
-    private static HttpClient client;
+    public static HttpClient client;
 
     public static void onInitialize() {
         executorService = Executors.newFixedThreadPool(2);

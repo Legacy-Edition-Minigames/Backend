@@ -23,7 +23,6 @@ public class ConfigManager {
             .registerTypeAdapter(Instant.class, new InstantSerializer())
             .create();
 
-
     public static Gson getGSON() {
         return GSON;
     }

@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
+import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextCodecs;
 
@@ -57,10 +58,10 @@ public class BridgeIn {
 
         if (isMuted) {
             if (LEMBackend.ProhibitorModule.module.canPlayerChat(obj.get("player_uuid").getAsString())) {
+                JsonObject custom = new JsonObject();
+                custom.add("msg", obj.get("msg"));
+                ProhibitorExecuter.notifyServer("Auto Expiration", obj.get("player_uuid").getAsString(), "unmute_w_msg", Text.translatable("mco.configure.world.subscription.expired"), custom);
                 isMuted = false;
-                obj.addProperty("type", "player_unmuted");
-                obj.addProperty("muted", isMuted);
-                BridgeOut.sendMessageToServer(bridge, obj);
             }
         }
 

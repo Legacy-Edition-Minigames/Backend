@@ -45,7 +45,7 @@ public class BotCommands {
     }
 
     public static void buttonPressed(JDA jda, ButtonInteractionEvent event) {
-        if (event.getCustomId().startsWith("prohibitor:"))
+        if (event.getCustomId().startsWith("prohibitor"))
             ProhibitorDiscordCommands.buttonInteraction(event);
         if (event.getButton().getCustomId().equals("link:start")) {
             LinkingManager.displayLinkInput(event);
@@ -53,7 +53,7 @@ public class BotCommands {
     }
 
     public static void modalInteraction(JDA jda, ModalInteractionEvent event) {
-        if (event.getCustomId().startsWith("prohibitor:"))
+        if (event.getCustomId().startsWith("prohibitor"))
             ProhibitorDiscordCommands.modalSubmit(event);
         if (event.getModalId().equals("link:modal")) {
             LinkingManager.linkInputResults(event);
@@ -61,7 +61,7 @@ public class BotCommands {
     }
 
     public static void selectInteraction(JDA jda, StringSelectInteractionEvent event) {
-        if (event.getCustomId().startsWith("prohibitor:"))
+        if (event.getCustomId().startsWith("prohibitor"))
             ProhibitorDiscordCommands.selectInteraction(event);
     }
 

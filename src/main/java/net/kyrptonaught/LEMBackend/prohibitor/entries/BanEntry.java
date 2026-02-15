@@ -19,7 +19,7 @@ public class BanEntry {
 
     public StampEntry revokedSource;
 
-    public BanEntry(String reason, String source, String source2) {
+    private BanEntry(String reason, String source, String source2) {
         this.banSource = new StampEntry(source, source2, Instant.now(), reason);
     }
 
@@ -36,6 +36,16 @@ public class BanEntry {
         entry.duration_type = duration_type;
         entry.duration_pretty = duration_time + " " + ChronoUnit.values()[duration_type].toString();
         return entry;
+    }
+
+    public BanEntry addEvidence(String... evidence) {
+        banSource.attachEvidence(evidence);
+        return this;
+    }
+
+    public BanEntry updateWhen(Instant now) {
+        banSource.updateWhen(now);
+        return this;
     }
 
     public void revoke(String who, String source, String reason) {

@@ -1,12 +1,18 @@
 package net.kyrptonaught.LEMBackend.prohibitor;
 
+import com.google.common.collect.Iterables;
 import com.google.gson.JsonObject;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import com.mojang.serialization.JsonOps;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
+import net.minecraft.util.LenientJsonParser;
+import net.minecraft.util.dynamic.Codecs;
+
+import java.util.Base64;
 
 public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
 
@@ -17,11 +23,12 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
 
     @Override
     public void addRoutes() {
-        route(HTTP.GET, "/v0/{secret}/prohibitor/joincheck/{whiteliststatus}/{uuid}", this::checkPlayer);
+        route(HTTP.GET, "/v0/{secret}/prohibitor/joincheck/{whiteliststatus}", this::checkPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/ban/perm/{uuid}", this::permBanPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/mute/perm/{uuid}", this::permMutePlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/ban/temp/{uuid}", this::tempBanPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/mute/temp/{uuid}", this::tempMutePlayer);
+        route(HTTP.POST, "/v0/{secret}/prohibitor/ban/skin/{uuid}", this::skinBanPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/kick/{uuid}", this::kickPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/warn/{uuid}", this::warnPlayer);
         route(HTTP.POST, "/v0/{secret}/prohibitor/whitelist/add/{uuid}", this::whitelistPlayer);
@@ -33,73 +40,86 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
     }
 
     private void checkPlayer(Context ctx) {
-        String uuid = ctx.pathParam("uuid");
         String whitelistStatus = ctx.pathParam("whiteliststatus");
+        JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        Text response = module.canPlayerJoin(uuid, whitelistStatus);
-        if (response != null) ctx.result(TextCodecs.CODEC.encodeStart(JsonOps.INSTANCE, response).getOrThrow().toString());
-        else ctx.result("success");
+        GameProfile profile = Codecs.GAME_PROFILE_CODEC.parse(JsonOps.INSTANCE, obj.get("profile")).result().get();
+        String ip = obj.get("ip").getAsString();
+
+        String skin = null;
+        Property prop = Iterables.getFirst(profile.properties().get("textures"), null);
+        if (prop != null) skin = LenientJsonParser.parse(new String(Base64.getDecoder().decode(prop.value()))).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
+
+        JsonObject response = module.getJoinStatus(profile.id().toString(), profile.name(), ip, skin, whitelistStatus);
+        ctx.result(response.toString());
     }
 
     private void permBanPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
-
-        module.permaBan(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
+        ProhibitorModule.multiPermBan("_uuid_" + "_ip_", uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     private void permMutePlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        module.permaMute(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
+        ProhibitorExecuter.permaMute(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     private void tempBanPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        module.tempBan(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString(), obj.get("duration_time").getAsInt(), obj.get("duration_type").getAsByte());
+        ProhibitorModule.multiTempBan("_uuid_" + "_ip_", uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString(), obj.get("duration_time").getAsInt(), obj.get("duration_type").getAsByte());
     }
 
     private void tempMutePlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        module.tempMute(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString(), obj.get("duration_time").getAsInt(), obj.get("duration_type").getAsByte());
+        ProhibitorExecuter.tempMute(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString(), obj.get("duration_time").getAsInt(), obj.get("duration_type").getAsByte());
+    }
+
+    private void skinBanPlayer(Context ctx) {
+        String uuid = ctx.pathParam("uuid");
+        JsonObject obj = ctx.bodyAsClass(JsonObject.class);
+
+        ProhibitorModule.skinBan(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     private void kickPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        module.kick(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
+        ProhibitorExecuter.kick(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     private void warnPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        module.warn(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
+        ProhibitorExecuter.warn(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     private void whitelistPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        ctx.result("" + module.whitelist(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString()));
+        ctx.result("" + ProhibitorExecuter.whitelist(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString()));
     }
 
     private void susPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        ctx.result("" + module.sus(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString()));
+        ctx.result("" + ProhibitorExecuter.sus(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString()));
     }
 
     private void unSusPlayer(Context ctx) {
         String uuid = ctx.pathParam("uuid");
-        module.unSus(uuid);
+        JsonObject obj = ctx.bodyAsClass(JsonObject.class);
+        ProhibitorExecuter.revokeSus(uuid, obj.get("stamp_who").getAsString(), obj.get("stamp_source").getAsString(), obj.get("stamp_reason").getAsString());
     }
 
     public void startLink(Context ctx) {
