@@ -24,7 +24,7 @@ dependencies {
 	shadow implementation("net.dv8tion:JDA:6.3.0") { exclude module: 'opus-java' }
 
 	//Javalin
-	shadow implementation("io.javalin:javalin:6.7.0")
+	shadow implementation("io.javalin:javalin:7.0.0")
 }
 
 loom {
