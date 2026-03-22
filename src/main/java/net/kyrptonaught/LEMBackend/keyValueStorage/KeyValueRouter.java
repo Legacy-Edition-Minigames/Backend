@@ -1,5 +1,6 @@
 package net.kyrptonaught.LEMBackend.keyValueStorage;
 
+import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
 
@@ -11,10 +12,10 @@ public class KeyValueRouter extends ModuleRouter<KeyValueModule> {
     }
 
     @Override
-    public void addRoutes() {
-        route(HTTP.GET, "/v0/{secret}/kvs/set/{id}/{key}/{value}", this::setValue);
-        route(HTTP.GET, "/v0/{secret}/kvs/get/{id}/{key}", this::getValue);
-        route(HTTP.GET, "/v0/{secret}/kvs/reset/{id}/{key}", this::resetValue);
+    public void addRoutes(RoutesConfig routes) {
+        route(routes, HTTP.GET, "/v1/{secret}/kvs/set/{id}/{key}/{value}", this::setValue);
+        route(routes, HTTP.GET, "/v1/{secret}/kvs/get/{id}/{key}", this::getValue);
+        route(routes, HTTP.GET, "/v1/{secret}/kvs/reset/{id}/{key}", this::resetValue);
     }
 
     public void getValue(Context ctx) {

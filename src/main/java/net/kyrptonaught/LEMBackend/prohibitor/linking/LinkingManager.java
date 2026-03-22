@@ -15,10 +15,10 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
 import net.kyrptonaught.LEMBackend.LEMBackend;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeIn;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
-import net.kyrptonaught.LEMBackend.discordBridge.WebhookSender;
-import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.LinkAction;
 
 import java.util.Collections;
 import java.util.Map;
@@ -36,13 +36,17 @@ public class LinkingManager {
         LinkInProgress link = linksInProgress.remove(linkID);
 
         if (link != null) {
-            ProhibitorExecuter.link(link.mcUUID, discordID, link.source);
+            LinkAction.link(link.mcUUID, discordID, link.source);
             discordLinks.put(discordID, link.mcUUID);
             LEMBackend.ProhibitorModule.module.save(LEMBackend.gson);
             return link;
         }
 
         return null;
+    }
+
+    public static void addLink(String mcUUID, long discordID) {
+        discordLinks.put(discordID, mcUUID);
     }
 
     public static String getMCFromDiscord(long discordID) {
@@ -53,9 +57,12 @@ public class LinkingManager {
         return discordLinks;
     }
 
-    public static void load(Map<Long, String> discordLinks) {
-        if (discordLinks != null && !discordLinks.isEmpty())
-            LinkingManager.discordLinks.putAll(discordLinks);
+    public static void load(JsonObject discordLinks) {
+        if (discordLinks != null && !discordLinks.isEmpty()) {
+            for (String s : discordLinks.keySet()) {
+                LinkingManager.discordLinks.put(Long.parseLong(s), discordLinks.get(s).getAsString());
+            }
+        }
     }
 
     public static void prepareChannel(JDA jda, long channel) {
@@ -69,8 +76,23 @@ public class LinkingManager {
 
     public static void generateDiscordInput(JDA jda, long channel) {
         MessageEmbed embed = new EmbedBuilder()
-                .setDescription("To link your account:\n\n1. In Minecraft join the server `legacyminigames.net`.\n2. Open the options dialog(`G` by default), select `Options` then `Discord Account Link`.\n3. Click `Link` below and enter the code from Minecraft.\n\nIf you are unable to link your account, please contact <@793437875685425154>.\nIf you are coming from patreon, send Emmie a message **on Patreon**.")
-                .build();
+                .setDescription("""
+                        To link your account:
+                        
+                        ***2.0 / Rewrite***
+                        - 1. In Minecraft join the server `legacyminigames.net`
+                        - 2. Open the options dialog(`G` by default), select `Options` then `Discord Account Link`
+                        - 3. Click `Link` below and enter the code from Minecraft
+                        
+                        ***1.0 / 1.20.4***
+                        - 1. In Minecraft join the server `legacyminigames.net`
+                        - 2. Type `/discordLink`
+                        - 3. Click `Link` below and enter the code from Minecraft
+                        
+                        
+                        If you are unable to link your account, please contact <@793437875685425154>
+                        If you are coming from patreon, send Emmie a message **on Patreon**
+                        """).build();
 
         jda.getTextChannelById(channel).sendMessageEmbeds(Collections.singleton(embed))
                 .addComponents(ActionRow.of(Button.primary("link:start", "Link")))
@@ -102,7 +124,7 @@ public class LinkingManager {
         event.getGuild().addRoleToMember(event.getMember(), event.getGuild().getRoleById(BridgeModule.config.linkRoleID)).queue();
         event.reply("Linked!").setEphemeral(true).queue();
 
-        WebhookSender.log(BridgeModule.config.loggingWebhookURL, "Discord Account Link", "<@" + event.getMember().getId() + "> (" + event.getMember().getEffectiveName() + ") linked their account to MC -> " + link.mcUUID());
+        BridgeIn.sendLogMessage("Discord Account Link", "<@" + event.getMember().getId() + "> (" + event.getMember().getEffectiveName() + ") linked their account to MC -> " + link.mcUUID());
 
         JsonObject obj = new JsonObject();
         obj.addProperty("type", "link_success");

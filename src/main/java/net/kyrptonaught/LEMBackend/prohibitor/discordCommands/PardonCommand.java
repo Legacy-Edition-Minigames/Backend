@@ -18,7 +18,6 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.modals.Modal;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
-import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 
@@ -38,7 +37,7 @@ public class PardonCommand {
     }
 
     public static void buttonInteraction(ButtonInteractionEvent event) {
-       event.replyModal(buildSelectModal(event.getButton().getCustomId())).queue();
+        event.replyModal(buildSelectModal(event.getButton().getCustomId())).queue();
     }
 
     public static void modalSubmit(ModalInteractionEvent event) {

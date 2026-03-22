@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.forums.ForumPost;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -16,9 +17,12 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +31,8 @@ public class BridgeModule extends Module {
     public static DiscordBridgeConfig config;
     public static final Map<String, ServerInfo> servers = new ConcurrentHashMap<>();
     public static JDA jda;
+    public static Webhook adminLogWebhook;
+    public static Webhook logWebhook;
 
     public BridgeModule() {
         super("discordBridge");
@@ -52,10 +58,13 @@ public class BridgeModule extends Module {
     }
 
     public void registerServer(String bridge, WsContext ctx) {
-        TextChannel channel = BridgeActions.getOrCreateChannel(jda, config.bridgeCategoryID, bridge);
-        Webhook webhook = BridgeActions.getOrCreateWebhook(jda, channel, "Heirloom");
+        TextChannel chatChannel = BridgeActions.getOrCreateChannel(jda, config.bridgeCategoryID, bridge);
+        Webhook chatWebhook = BridgeActions.getOrCreateWebhook(jda, chatChannel, "Heirloom");
 
-        servers.put(bridge, new ServerInfo(ctx, channel.getIdLong(), webhook.getUrl()));
+        TextChannel logChannel = BridgeActions.getOrCreateChannel(jda, config.logCategoryID, bridge);
+        Webhook logWebhook = BridgeActions.getOrCreateWebhook(jda, logChannel, "Heirloom");
+
+        servers.put(bridge, new ServerInfo(ctx, chatChannel.getIdLong(), chatWebhook, logChannel.getIdLong(), logWebhook));
     }
 
     public void removeServer(WsCloseContext ctx) {
@@ -90,7 +99,7 @@ public class BridgeModule extends Module {
 
             @Override
             public void onMessageContextInteraction(MessageContextInteractionEvent event) {
-                System.out.println("message context");
+                BotCommands.messageContextInteraction(jda, event);
             }
 
             @Override
@@ -101,6 +110,13 @@ public class BridgeModule extends Module {
         });
         BotCommands.registerCommands(jda);
         LinkingManager.prepareChannel(jda, config.linkChannelID);
+        adminLogWebhook = BridgeActions.getOrCreateWebhook(jda, jda.getTextChannelById(config.loggingChannelID), "Heirloom");
+        logWebhook = BridgeActions.getOrCreateWebhook(jda, BridgeActions.getOrCreateChannel(jda, config.logCategoryID, "backend"), "Heirloom");
+
+        Logger rootLogger = (Logger) LogManager.getRootLogger();
+        BridgeLogger appender = new BridgeLogger("Bridge Logger", null, null);
+        appender.start();
+        rootLogger.addAppender(appender);
     }
 
 
@@ -127,5 +143,12 @@ public class BridgeModule extends Module {
         Role role = member.getGuild().getRoleById(roleID);
         if (role == null) return false;
         return member.getUnsortedRoles().contains(role);
+    }
+
+    public String createPlayerReport(String reportedPlayer, String content, long reportingPlayer) {
+        ForumPost post = BridgeActions.createForumPost(jda, 1474598684137095210L, reportedPlayer, MessageCreateData.fromContent(content));
+        post.getThreadChannel().addThreadMemberById(reportingPlayer).queue();
+        post.getThreadChannel().sendMessage("Ping as requested: <@" + reportingPlayer + ">").mentionUsers(reportingPlayer).queue();
+        return post.getMessage().getJumpUrl();
     }
 }

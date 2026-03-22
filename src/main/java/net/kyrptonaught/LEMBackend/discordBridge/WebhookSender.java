@@ -1,71 +1,37 @@
 package net.kyrptonaught.LEMBackend.discordBridge;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import net.kyrptonaught.LEMBackend.IO;
+import net.dv8tion.jda.api.entities.EmbedType;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.Webhook;
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
+
+import java.util.EnumSet;
 
 public class WebhookSender {
-    public static void sendMessage(String webhook, String name, String url, String msg) {
+    public static void sendMessage(Webhook webhook, String name, String url, String msg) {
         sendMessage(webhook, name, url, msg, false);
     }
 
-    public static void sendMessage(String webhook, String name, String url, String msg, boolean allowMentions) {
+    public static void sendMessage(Webhook webhook, String name, String url, String msg, boolean allowMentions) {
         if (webhook != null) {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("content", msg);
-            payload.addProperty("username", name);
-            payload.addProperty("avatar_url", url);
-
-            JsonObject mentions = new JsonObject();
-            if (allowMentions) {
-                JsonArray parse = new JsonArray();
-                parse.add("users");
-                parse.add("roles");
-                parse.add("everyone");
-                mentions.add("parse", parse);
-            } else mentions.add("parse", new JsonArray());
-
-            payload.add("allowed_mentions", mentions);
-            IO.asyncPostAlt(webhook, payload.toString());
+            WebhookMessageCreateAction<Message> action = webhook.sendMessage(msg).setUsername(name).setAvatarUrl(url);
+            if (allowMentions) action.setAllowedMentions(EnumSet.of(Message.MentionType.USER, Message.MentionType.ROLE, Message.MentionType.EVERYONE));
+            action.queue();
         }
     }
 
-    public static void log(String webhook, String logSource, String message) {
+    public static void log(Webhook webhook, String logSource, String message) {
         if (webhook != null) {
-
-            JsonObject embed = new JsonObject();
-            embed.addProperty("title", logSource);
-            embed.addProperty("description", message);
-            embed.addProperty("color", 0xa87132);
-
-            JsonArray embeds = new JsonArray();
-            embeds.add(embed);
-
-            JsonObject payload = new JsonObject();
-            payload.add("embeds", embeds);
-
-            IO.asyncPostAlt(webhook, payload.toString());
+            webhook.sendMessageEmbeds(new MessageEmbed(null, logSource, message, EmbedType.RICH, null, 0xa87132, null, null, null, null, null, null, null)).queue();
         }
     }
 
-    public static void logMention(String webhook, String logSource, String message, long moderatorRoleID, boolean allowMentions) {
+    public static void logMention(Webhook webhook, String logSource, String message, long moderatorRoleID, boolean allowMentions) {
         if (webhook != null) {
-
-            JsonObject payload = new JsonObject();
-            payload.addProperty("content", "**" + logSource + "** <@&" + moderatorRoleID + ">\n" + message);
-
-            JsonObject mentions = new JsonObject();
-            if (allowMentions) {
-                JsonArray parse = new JsonArray();
-                parse.add("users");
-                parse.add("roles");
-                parse.add("everyone");
-                mentions.add("parse", parse);
-            } else mentions.add("parse", new JsonArray());
-
-            payload.add("allowed_mentions", mentions);
-
-            IO.asyncPostAlt(webhook, payload.toString());
+            WebhookMessageCreateAction<Message> action = webhook.sendMessage("**" + logSource + "** <@&" + moderatorRoleID + ">\n" + message);
+            if (allowMentions) action.setAllowedMentions(EnumSet.of(Message.MentionType.USER, Message.MentionType.ROLE, Message.MentionType.EVERYONE));
+            action.queue();
         }
     }
 }

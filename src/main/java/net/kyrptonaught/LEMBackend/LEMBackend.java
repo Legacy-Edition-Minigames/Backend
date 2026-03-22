@@ -2,6 +2,7 @@ package net.kyrptonaught.LEMBackend;
 
 import com.google.gson.Gson;
 import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -11,6 +12,7 @@ import net.kyrptonaught.LEMBackend.discordBridge.BridgeRouter;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorRouter;
 import net.kyrptonaught.LEMBackend.resourcer.ResourcerRouter;
+import net.kyrptonaught.LEMBackend.serverReplay.ServerReplayRouter;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
@@ -27,6 +29,9 @@ public class LEMBackend implements ModInitializer {
     public static KeyValueRouter KeyValueModule;
     public static BridgeRouter BridgeModule;
     public static ResourcerRouter ResourcerModule;
+    public static ServerReplayRouter ServerReplayModule;
+
+    public static net.kyrptonaught.LEMBackend.legacy.userConfig.UserConfigRouter LegacyUserConfigModule;
 
     public static void start() {
         config = ConfigManager.load(getBaseConfigPath().resolve("LEMBackendConfig.json"), new ServerConfig());
@@ -38,18 +43,25 @@ public class LEMBackend implements ModInitializer {
         KeyValueModule = new KeyValueRouter();
         BridgeModule = new BridgeRouter();
         ResourcerModule = new ResourcerRouter();
+        ServerReplayModule = new ServerReplayRouter();
 
-        app = Javalin.create((javalinConfig) -> {
-                    javalinConfig.showJavalinBanner = false;
-                    javalinConfig.jsonMapper(new GsonMapper(gson));
+        LegacyUserConfigModule = new net.kyrptonaught.LEMBackend.legacy.userConfig.UserConfigRouter();
+
+
+        app = Javalin.create((config) -> {
+                    config.startup.showJavalinBanner = false;
+                    config.jsonMapper(new GsonMapper(gson));
+
+                    load(config.routes, ProhibitorModule);
+                    load(config.routes, UserConfigModule);
+                    load(config.routes, KeyValueModule);
+                    load(config.routes, BridgeModule);
+                    load(config.routes, ResourcerModule);
+                    load(config.routes, ServerReplayModule);
+                    load(config.routes, LegacyUserConfigModule);
                 })
                 .start(getConfig().port);
 
-        load(ProhibitorModule);
-        load(UserConfigModule);
-        load(KeyValueModule);
-        load(BridgeModule);
-        load(ResourcerModule);
         ResourcerModule.module.injectTranslations();
 
         System.out.println("LEMBackend server started");
@@ -65,6 +77,8 @@ public class LEMBackend implements ModInitializer {
         save(KeyValueModule);
         save(BridgeModule);
         save(ResourcerModule);
+        save(ServerReplayModule);
+        save(LegacyUserConfigModule);
 
         System.out.println("LEMBackend all saved");
         IO.stop();
@@ -82,8 +96,8 @@ public class LEMBackend implements ModInitializer {
         return getConfig().secretKey.equals(secret);
     }
 
-    private static void load(ModuleRouter<?> router) {
-        router.addRoutes();
+    private static void load(RoutesConfig config, ModuleRouter<?> router) {
+        router.addRoutes(config);
         router.module.load();
     }
 

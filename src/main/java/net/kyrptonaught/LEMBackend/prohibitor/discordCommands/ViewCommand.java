@@ -1,5 +1,6 @@
 package net.kyrptonaught.LEMBackend.prohibitor.discordCommands;
 
+import com.google.gson.JsonObject;
 import net.dv8tion.jda.api.components.ModalTopLevelComponent;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -10,15 +11,11 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
 import net.dv8tion.jda.api.components.section.Section;
-import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
-import net.dv8tion.jda.api.components.thumbnail.Thumbnail;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -26,15 +23,16 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.api.utils.FileUpload;
+import net.kyrptonaught.LEMBackend.FileHelper;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
-import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.*;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.SkinBanAction;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
-import org.w3c.dom.Text;
 
-
-import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -58,8 +56,8 @@ public class ViewCommand {
         String id = event.getButton().getCustomId();
         if (id.startsWith(ID + "open")) {
             String[] key = id.split(",");
-            event.editComponents(buildHistory(key[1], key[2], Integer.parseInt(key[3]))).useComponentsV2().queue();
-        } else event.replyModal(buildSelectModal(id)).queue();
+            event.editComponents(buildHistory(key[1], Integer.parseInt(key[2]))).useComponentsV2().queue();
+        } else event.replyModal(buildSelectModal(id, null)).queue();
     }
 
     public static void modalSubmit(ModalInteractionEvent event) {
@@ -75,10 +73,8 @@ public class ViewCommand {
             long discord = event.getValue("player_id").getAsLongList().getFirst();
             player_uuid = LinkingManager.getMCFromDiscord(discord);
         }
-        String types = String.join("-", event.getValue(ID + "punishment_type").getAsStringList());
 
-
-        event.getHook().sendMessageComponents(buildHistory(player_uuid, types, 0)).useComponentsV2().queue();
+        event.getHook().sendMessageComponents(buildHistory(player_uuid, 0)).useComponentsV2().queue();
     }
 
     private static List<ContainerChildComponent> buildMessage(String playerLookupType) {
@@ -101,50 +97,63 @@ public class ViewCommand {
         return container;
     }
 
-    private static Modal buildSelectModal(String button) {
+    public static Modal buildSelectModal(String button, String id) {
         List<ModalTopLevelComponent> container = new ArrayList<>();
 
         if (button.contains("player_name"))
-            container.add(Label.of("Player's MC Name: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC Name").setRequired(true).build()));
+            container.add(Label.of("Player's MC Name: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(id).setPlaceholder("MC Name").setRequired(true).build()));
         else if (button.contains("player_uuid"))
-            container.add(Label.of("Player's MC UUID: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC UUID").setRequired(true).build()));
+            container.add(Label.of("Player's MC UUID: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(id).setPlaceholder("MC UUID").setRequired(true).build()));
         else if (button.contains("player_discord"))
-            container.add(Label.of("Player's Discord: ", EntitySelectMenu.create("player_id", EntitySelectMenu.SelectTarget.USER).setRequired(true).build()));
+            container.add(Label.of("Player's Discord: ", PunishCommand.discordSelect(id).setRequired(true).build()));
         else if (button.contains("player_ip"))
-            container.add(Label.of("Player's IP: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("IP").setRequired(true).build()));
-
-        container.add(Label.of("Types", StringSelectMenu.create(ID + "punishment_type")
-                .addOption("Bans", "_b_")
-                .addOption("Mutes", "_m_")
-                .addOption("Skin Bans", "_sb_")
-                .addOption("Whitelist", "_wl_")
-                .addOption("Warnings", "_w_")
-                .addOption("Kicks", "_k_")
-                .addOption("Sussies", "_ss_")
-                .setDefaultValues("_b_").setMaxValues(7)
-                .setRequired(true).build()));
+            container.add(Label.of("Player's IP: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(id).setPlaceholder("IP").setRequired(true).build()));
 
         return Modal.create(button + "_submit", "Lookup").addComponents(container).build();
     }
 
-    private static Container buildHistory(String uuid, String types, int page) {
+    public static Container buildHistory(String uuid, int page) {
         List<ContainerChildComponent> container = new ArrayList<>();
         Instant now = Instant.now();
         PlayerEntry playerEntry = ProhibitorModule.loadUUID(uuid);
 
         container.add(Section.of(Button.secondary("test", Emoji.fromUnicode("⌚")), TextDisplay.of("## *" + playerEntry.associatedName + "*'s history")));
         container.add(TextDisplay.of("-# **UUID:** " + playerEntry.associatedUUID));
-        container.add(TextDisplay.of("-# **IP:** " + playerEntry.associatedIP));
-        container.add(TextDisplay.of("-# **First Join:** " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.firstSeen)));
-        container.add(TextDisplay.of("-# **Last Join:** " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.lastSeen)));
-
+        if (playerEntry.firstSeen == null || playerEntry.lastSeen == null) {
+            container.add(TextDisplay.of("-# **First Join:** Never"));
+            container.add(TextDisplay.of("-# **Last Join:** Never"));
+        } else {
+            container.add(TextDisplay.of("-# **First Join:** " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.firstSeen)));
+            container.add(TextDisplay.of("-# **Last Join:** " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.lastSeen)));
+        }
         container.add(Separator.createDivider(Separator.Spacing.LARGE));
 
         int currentPage = -1;
         int totalPages = 0;
 
+        if (playerEntry.associatedIP != null) {
+            totalPages++;
+            if (currentPage != -999)
+                if (++currentPage == page) {
+                    container.add(TextDisplay.of("### IP Info"));
+                    buildIPInfo(container, playerEntry.associatedIP);
+                    currentPage = -999;
+                }
+        }
 
-        if (types.contains("_wl_") && playerEntry.whitelistStatus != null) {
+        if (playerEntry.discordLink != null) {
+            totalPages++;
+            if (currentPage != -999)
+                if (++currentPage == page) {
+                    container.add(TextDisplay.of("### Discord Link"));
+                    container.add(TextDisplay.of("Discord: " + "<@" + playerEntry.discordLink.discordID() + ">"));
+                    container.add(TextDisplay.of("Date Linked: " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.firstSeen)));
+                    container.add(TextDisplay.of("Server: " + playerEntry.discordLink.server()));
+                    currentPage = -999;
+                }
+        }
+
+        if (playerEntry.whitelistStatus != null) {
             totalPages++;
             if (currentPage != -999)
                 if (++currentPage == page) {
@@ -153,7 +162,7 @@ public class ViewCommand {
                     currentPage = -999;
                 }
         }
-        if (types.contains("_ss_") && playerEntry.sussyStatus != null) {
+        if (playerEntry.sussyStatus != null) {
             totalPages++;
             if (currentPage != -999)
                 if (++currentPage == page) {
@@ -162,7 +171,7 @@ public class ViewCommand {
                     currentPage = -999;
                 }
         }
-        if (types.contains("_b_")) {
+        if (!playerEntry.bans.isEmpty()) {
             totalPages += playerEntry.bans.size();
             if (currentPage != -999)
                 for (BanEntry entry : playerEntry.bans) {
@@ -177,7 +186,7 @@ public class ViewCommand {
                     }
                 }
         }
-        if (types.contains("_m_")) {
+        if (!playerEntry.mutes.isEmpty()) {
             totalPages += playerEntry.mutes.size();
             if (currentPage != -999)
                 for (BanEntry entry : playerEntry.mutes) {
@@ -192,13 +201,13 @@ public class ViewCommand {
                     }
                 }
         }
-        if (types.contains("_sb_")) {
+        if (!playerEntry.skinBans.isEmpty()) {
             totalPages += playerEntry.skinBans.size();
             if (currentPage != -999)
                 for (SkinBanEntry entry : playerEntry.skinBans) {
                     if (++currentPage == page) {
                         container.add(TextDisplay.of("### Skin Ban"));
-                        ProhibitorModule.generateSkinRender(entry.skin);
+                        SkinBanAction.generateSkinRender(entry.skin);
                         container.add(MediaGallery.of(MediaGalleryItem.fromFile(FileUpload.fromData(ProhibitorModule.getSkinRenderPath(entry.skin))).withDescription(entry.skin)));
                         addStamp(container, entry.banSource);
                         currentPage = -999;
@@ -206,7 +215,7 @@ public class ViewCommand {
                     }
                 }
         }
-        if (types.contains("_w_")) {
+        if (!playerEntry.warns.isEmpty()) {
             totalPages += playerEntry.warns.size();
             if (currentPage != -999)
                 for (StampEntry entry : playerEntry.warns) {
@@ -218,7 +227,7 @@ public class ViewCommand {
                     }
                 }
         }
-        if (types.contains("_k_")) {
+        if (!playerEntry.kicks.isEmpty()) {
             totalPages += playerEntry.kicks.size();
             if (currentPage != -999)
                 for (StampEntry entry : playerEntry.kicks) {
@@ -232,9 +241,9 @@ public class ViewCommand {
         }
 
         container.add(ActionRow.of(
-                Button.of(page > 0 ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY, ID + "open1," + uuid + "," + types + "," + (page - (page > 0 ? 1 : 0)), Emoji.fromUnicode("⬅️")),
-                Button.secondary(ID + "open2," + uuid + "," + types + "," + (page), (page + 1) + "/" + totalPages),
-                Button.of(page + 1 < totalPages ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY, ID + "open3," + uuid + "," + types + "," + (page + (page + 1 < totalPages ? 1 : 0)), Emoji.fromUnicode("➡️"))
+                Button.of(page > 0 ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY, ID + "open1," + uuid + "," + (page - (page > 0 ? 1 : 0)), Emoji.fromUnicode("⬅️")),
+                Button.secondary(ID + "open2," + uuid + "," + (page), (page + 1) + "/" + totalPages),
+                Button.of(page + 1 < totalPages ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY, ID + "open3," + uuid + "," + (page + (page + 1 < totalPages ? 1 : 0)), Emoji.fromUnicode("➡️"))
         ));
 
         return Container.of(container);
@@ -264,5 +273,27 @@ public class ViewCommand {
         container.add(TextDisplay.of("**When:** " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(stamp.when)));
         container.add(TextDisplay.of("**By:** " + stamp.who));
         container.add(TextDisplay.of("**Reason:** " + stamp.why));
+    }
+
+    private static void buildIPInfo(List<ContainerChildComponent> container, String ip) {
+        JsonObject obj = FileHelper.download("http://ip-api.com/json/" + ip + "?fields=16991744", JsonObject.class);
+
+        container.add(TextDisplay.of("IP: " + ip));
+        if (obj == null) {
+            TextDisplay.of("Status: Failed");
+            return;
+        }
+
+        String status = obj.get("status").getAsString();
+        if (!status.equals("success")) {
+            TextDisplay.of("Status: " + status);
+            return;
+        }
+
+        container.add(TextDisplay.of("ISP: " + obj.get("isp").getAsString()));
+        container.add(TextDisplay.of("ORG: " + obj.get("org").getAsString()));
+        container.add(TextDisplay.of("Mobile: " + obj.get("mobile").getAsString()));
+        container.add(TextDisplay.of("Proxy: " + obj.get("proxy").getAsString()));
+        container.add(TextDisplay.of("Hosting: " + obj.get("hosting").getAsString()));
     }
 }

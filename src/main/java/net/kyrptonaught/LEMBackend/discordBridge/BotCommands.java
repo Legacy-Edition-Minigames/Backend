@@ -6,21 +6,26 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
+import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
+import net.kyrptonaught.LEMBackend.userConfig.UserConfigDiscordCommands;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.TextCodecs;
 
@@ -30,10 +35,7 @@ import java.util.List;
 public class BotCommands {
 
     public static void registerCommands(JDA jda) {
-        jda.updateCommands().addCommands(
-                Commands.slash("info", "Get the server info"),
-                ProhibitorDiscordCommands.register()
-        ).queue();
+        jda.updateCommands().addCommands(Commands.slash("info", "Get the server info")).addCommands(ProhibitorDiscordCommands.register()).addCommands(UserConfigDiscordCommands.register()).queue();
     }
 
     public static void execute(JDA jda, SlashCommandInteraction event) {
@@ -41,6 +43,7 @@ public class BotCommands {
         switch (event.getName()) {
             case "info" -> infoCommandExecute(server, event);
             case "prohibitor" -> ProhibitorDiscordCommands.execute(event);
+            case "userconfig", "legacyuserconfig" -> UserConfigDiscordCommands.execute(event);
         }
     }
 
@@ -55,9 +58,10 @@ public class BotCommands {
     public static void modalInteraction(JDA jda, ModalInteractionEvent event) {
         if (event.getCustomId().startsWith("prohibitor"))
             ProhibitorDiscordCommands.modalSubmit(event);
-        if (event.getModalId().equals("link:modal")) {
+        if (event.getModalId().equals("link:modal"))
             LinkingManager.linkInputResults(event);
-        }
+        if (event.getCustomId().startsWith("userconfig"))
+            UserConfigDiscordCommands.modalSubmit(event);
     }
 
     public static void selectInteraction(JDA jda, StringSelectInteractionEvent event) {
@@ -65,14 +69,21 @@ public class BotCommands {
             ProhibitorDiscordCommands.selectInteraction(event);
     }
 
-    public static void infoCommandExecute(MinecraftServer server, SlashCommandInteraction event) {
+    public static void messageContextInteraction(JDA jda, MessageContextInteractionEvent event) {
+        if (event.getCommandString().startsWith("Prohibitor"))
+            ProhibitorDiscordCommands.messageContextInteraction(event);
+        if (event.getCommandString().startsWith("UserConfig"))
+            UserConfigDiscordCommands.messageContextInteraction(event);
+    }
+
+    public static void infoCommandExecute(MinecraftServer server, IReplyCallback event) {
         if (BridgeModule.servers.containsKey(event.getChannel().getName())) {
             event.deferReply().queue();
             BridgeModule.servers.get(event.getChannel().getName()).requestInfoCommand(event);
         }
     }
 
-    public static void infoCommandResponse(JsonObject obj, SlashCommandInteraction event) {
+    public static void infoCommandResponse(JsonObject obj, IReplyCallback event) {
         double serverTickTime = average(obj.get("server_tick_times").getAsJsonArray()) * 1.0E-6D;
         long total_memory = obj.get("total_memory").getAsLong();
         long free_memory = obj.get("free_memory").getAsLong();
@@ -113,10 +124,10 @@ public class BotCommands {
     }
 
     public static void gameStartInfo(JDA jda, long channelID, JsonObject obj) {
-        String mapName = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("map_name")).result().get(), true);
+        String mapName = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("map_name")).result().get(), true).replaceAll("!", "");
         List<ContainerChildComponent> container = new ArrayList<>();
-
-        container.add(TextDisplay.ofFormat("# %s\n-# %s", mapName, obj.get("map_size").getAsString()));
+        container.add(Section.of(Button.secondary("empty", obj.get("game_id").getAsString()).asDisabled(), TextDisplay.of("# " + mapName), TextDisplay.of("-# " + obj.get("map_size").getAsString())));
+        //container.add(TextDisplay.ofFormat("# %s\n-# %s", mapName, obj.get("map_size").getAsString()));
         container.add(MediaGallery.of(MediaGalleryItem.fromUrl("https://raw.githubusercontent.com/Team-Lodestone/Documentation/refs/heads/main/LCE/Game/BattleMapImages/" + mapName + ".png")));
         container.add(TextDisplay.ofFormat("> Players: %s\n> Spectators: %s", obj.get("player_count").getAsString(), obj.get("spectator_count").getAsString()));
         container.add(Separator.createDivider(Separator.Spacing.SMALL));

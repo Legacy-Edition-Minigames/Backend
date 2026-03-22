@@ -2,13 +2,16 @@ package net.kyrptonaught.LEMBackend;
 
 import org.apache.commons.io.FileUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
+import java.util.Enumeration;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -22,6 +25,17 @@ public class FileHelper {
             return true;
         } catch (IOException exception) {
             System.out.println("Failed to delete directory: " + directory);
+            exception.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean deleteFilePath(Path file) {
+        try {
+            FileUtils.delete(file.toFile());
+            return true;
+        } catch (IOException exception) {
+            System.out.println("Failed to delete file: " + file);
             exception.printStackTrace();
         }
         return false;
@@ -98,6 +112,26 @@ public class FileHelper {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public static String download(String fileURL) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(openFileOrURL(fileURL)))) {
+            StringBuilder response = new StringBuilder();
+            String inputLine;
+
+            while ((inputLine = reader.readLine()) != null)
+                response.append(inputLine);
+
+            return response.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public static <T> T download(String fileURL, Class<T> clazz) {
+        return LEMBackend.gson.fromJson(download(fileURL), clazz);
     }
 
     public static InputStream openFileOrURL(String path) throws IOException {
@@ -180,5 +214,35 @@ public class FileHelper {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static void unzipDirectory(Path outputPath, Path filepath, String baseDirectory) {
+        try (ZipFile zip = new ZipFile(filepath.toFile())) {
+
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                try {
+                    ZipEntry entry = entries.nextElement();
+                    String entryName = FileHelper.fixPathSeparator(entry.getName());
+                    if (entryName.startsWith(baseDirectory)) {
+                        extractFile(zip, entry, outputPath.resolve(entryName.replace(baseDirectory, "")));
+                    }
+                } catch (FileAlreadyExistsException ignored) {
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void extractFile(ZipFile zip, ZipEntry entry, Path newOut) throws IOException {
+        if (entry.isDirectory()) {
+            Files.createDirectories(newOut);
+        } else {
+            Files.createDirectories(newOut.getParent());
+            Files.copy(zip.getInputStream(entry), newOut, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 }

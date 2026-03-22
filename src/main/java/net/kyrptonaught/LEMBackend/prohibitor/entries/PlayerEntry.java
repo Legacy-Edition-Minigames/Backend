@@ -30,6 +30,8 @@ public class PlayerEntry {
     public List<StampEntry> kicks = new ArrayList<>();
     public List<SkinBanEntry> skinBans = new ArrayList<>();
 
+    public List<ReportEntry> reports = new ArrayList<>();
+
     public BanEntry isActiveBan(Instant now) {
         for (BanEntry ban : bans) {
             if (ban.expired || ban.revokedSource != null) continue;
@@ -62,5 +64,25 @@ public class PlayerEntry {
     public void checkBan(BanEntry ban, Instant now) {
         if (ban.permanent || ban.expired) return;
         if (now.isAfter(ban.banSource.when.plus(ban.getDuration()))) ban.expire();
+    }
+
+    public void addBan(BanEntry entry) {
+        for (BanEntry ban : bans) if (ban.banSource.punishment_id.equals(entry.banSource.punishment_id)) return;
+        bans.add(entry);
+    }
+
+    public void addMute(BanEntry entry) {
+        for (BanEntry ban : mutes) if (ban.banSource.punishment_id.equals(entry.banSource.punishment_id)) return;
+        mutes.add(entry);
+    }
+
+    public void addKick(StampEntry entry) {
+        for (StampEntry ban : kicks) if (ban.punishment_id.equals(entry.punishment_id)) return;
+        kicks.add(entry);
+    }
+
+    public void addWarn(StampEntry entry) {
+        for (StampEntry ban : warns) if (ban.punishment_id.equals(entry.punishment_id)) return;
+        warns.add(entry);
     }
 }

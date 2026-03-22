@@ -1,18 +1,15 @@
 package net.kyrptonaught.LEMBackend.prohibitor;
 
-import com.google.common.collect.Iterables;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.mojang.authlib.properties.Property;
-import com.mojang.authlib.yggdrasil.ProfileResult;
-import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
-import com.mojang.util.UndashedUuid;
 import net.kyrptonaught.LEMBackend.FileHelper;
 import net.kyrptonaught.LEMBackend.IO;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeIn;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
 import net.kyrptonaught.LEMBackend.discordBridge.PatreonTier;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
@@ -20,24 +17,18 @@ import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.LenientJsonParser;
 import org.apache.commons.lang3.RandomStringUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.Map;
 
 public class ProhibitorModule extends Module {
     public ProhibitorModule() {
         super("prohibitor");
+        ChatFilter.genWords();
     }
 
-    public JsonObject getJoinStatus(String uuid, String name, String ip, String skin, String whitelistStatus) {
+    public static JsonObject getJoinStatus(String uuid, String name, String ip, String skin, String whitelistStatus) {
         JsonObject response = new JsonObject();
 
         Instant now = Instant.now();
@@ -66,7 +57,7 @@ public class ProhibitorModule extends Module {
         return response;
     }
 
-    private Text canPlayerJoin(PlayerEntry uuidEntry, PlayerEntry ipEntry, PlayerEntry nameEntry, Instant now, String whitelistStatus) {
+    private static Text canPlayerJoin(PlayerEntry uuidEntry, PlayerEntry ipEntry, PlayerEntry nameEntry, Instant now, String whitelistStatus) {
         Text result = checkPlayerEntryBans(uuidEntry, whitelistStatus, now);
         if (result != null) return result;
 
@@ -107,13 +98,13 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    public boolean canPlayerChat(String uuid) {
+    public static boolean canPlayerChat(String uuid) {
         PlayerEntry entry = loadUUID(uuid);
 
         return entry.isActiveMute(Instant.now()) == null;
     }
 
-    private Text checkPlayerSkinBans(PlayerEntry entry, String skin) {
+    private static Text checkPlayerSkinBans(PlayerEntry entry, String skin) {
         SkinBanEntry banEntry = entry.isActiveSkinBan(skin);
         if (banEntry != null) {
             return Text.translatable("gui.banned.skin.title").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
@@ -122,7 +113,7 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    private Text checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
+    private static Text checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
         BanEntry banEntry = entry.isActiveBan(now);
         if (banEntry != null) {
             return Text.translatable("multiplayer.disconnect.banned").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
@@ -143,7 +134,7 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    private Text checkPlayerEntryMutes(PlayerEntry entry, Instant now) {
+    private static Text checkPlayerEntryMutes(PlayerEntry entry, Instant now) {
         BanEntry banEntry = entry.isActiveMute(now);
         if (banEntry != null) {
             return Text.translatable("prohibitor.mute.cannotsent").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
@@ -153,36 +144,12 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    public static void multiPermBan(String id_types, String uuid, String who, String source, String reason, String... evidence) {
-        PlayerEntry uuidEntry = loadUUID(uuid);
-        Instant now = Instant.now();
-        if (id_types.contains("_uuid_")) ProhibitorExecuter.permaBan(uuidEntry, who, source, reason, now, evidence);
-        if (id_types.contains("_name_")) ProhibitorExecuter.permaBan(load(ID_TYPE.NAME, uuidEntry.associatedName), who, source, reason, now, evidence);
-        if (id_types.contains("_ip_") && uuidEntry.associatedIP != null) ProhibitorExecuter.permaBan(load(ID_TYPE.IP, uuidEntry.associatedIP), who, source, reason, now, evidence);
-    }
-
-    public static void multiTempBan(String id_types, String uuid, String who, String source, String reason, int duration_time, byte duration_type, String... evidence) {
-        PlayerEntry uuidEntry = loadUUID(uuid);
-        Instant now = Instant.now();
-        if (id_types.contains("_uuid_")) ProhibitorExecuter.tempBan(uuidEntry, who, source, reason, duration_time, duration_type, now, evidence);
-        if (id_types.contains("_name_")) ProhibitorExecuter.tempBan(load(ID_TYPE.NAME, uuidEntry.associatedName), who, source, reason, duration_time, duration_type, now, evidence);
-        if (id_types.contains("_ip_") && uuidEntry.associatedIP != null) ProhibitorExecuter.tempBan(load(ID_TYPE.IP, uuidEntry.associatedIP), who, source, reason, duration_time, duration_type, now, evidence);
-    }
-
     public static void multiRevoke(String id_types, String uuid, String who, String source, String reason) {
-        if (id_types.contains("_b_")) ProhibitorExecuter.revokeBans(uuid, who, source, reason);
-        if (id_types.contains("_m_")) ProhibitorExecuter.revokeMutes(uuid, who, source, reason);
-        if (id_types.contains("_sb_")) ProhibitorExecuter.revokeSkinBan(uuid, who, source, reason);
-        if (id_types.contains("_wl_")) ProhibitorExecuter.revokeWhitelist(uuid, who, source, reason);
-        if (id_types.contains("_ss_")) ProhibitorExecuter.revokeSus(uuid, who, source, reason);
-    }
-
-    public static boolean skinBan(String uuid, String who, String source, String reason, String... evidence) {
-        String url = getPlayerSkin(uuid);
-        if (url == null) return false;
-        generateSkinRender(url);
-        ProhibitorExecuter.skinBan(uuid, url, who, source, reason, evidence);
-        return true;
+        if (id_types.contains("_b_")) BanAction.revokeBans(uuid, who, source, reason);
+        if (id_types.contains("_m_")) MuteAction.revokeMutes(uuid, who, source, reason);
+        if (id_types.contains("_sb_")) SkinBanAction.revokeSkinBan(uuid, who, source, reason);
+        if (id_types.contains("_wl_")) WhitelistAction.revokeWhitelist(uuid, who, source, reason);
+        if (id_types.contains("_ss_")) SusAction.revokeSus(uuid, who, source, reason);
     }
 
     public static PlayerEntry loadUUID(String uuid) {
@@ -213,7 +180,7 @@ public class ProhibitorModule extends Module {
         for (ID_TYPE idType : ID_TYPE.values()) FileHelper.createDir(savePath.resolve(idType.name()));
         FileHelper.createDir(savePath.resolve("EVIDENCE"));
         FileHelper.createDir(savePath.resolve("SKINRENDERS"));
-        LinkingManager.load(readFileJson(gson, "discordLinks.json", Map.class));
+        LinkingManager.load(readFileJson(gson, "discordLinks.json", JsonObject.class));
     }
 
     @Override
@@ -234,25 +201,24 @@ public class ProhibitorModule extends Module {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("EVIDENCE").resolve(file);
     }
 
-    public static String getPlayerSkin(String uuid) {
-        if (LEMBackend.minecraftServer.getApiServices().sessionService() instanceof YggdrasilMinecraftSessionService sessionService) {
-            ProfileResult profile = sessionService.fetchProfile(UndashedUuid.fromString(uuid), true);
-            if (profile == null) return null;
-            Property prop = Iterables.getFirst(profile.profile().properties().get("textures"), null);
-            if (prop == null) return null;
-            return LenientJsonParser.parse(new String(Base64.getDecoder().decode(prop.value()))).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
-
-        }
-        return null;
-    }
-
-    public static void generateSkinRender(String url) {
-        String api = "https://starlightskins.lunareclipse.studio/render/custom/steve/full?wideModel=https://raw.githubusercontent.com/kyrptonaught/Minigame-Resources/refs/heads/2.0/double.obj&cameraPosition={%22x%22:%220%22,%22y%22:%2220%22,%22z%22:%22-40%22}&skinUrl=" + url;
-        FileHelper.download(api, getSkinRenderPath(url));
-    }
 
     public static Path getSkinRenderPath(String url) {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("SKINRENDERS").resolve(url.substring(38) + ".png");
+    }
+
+    public static void notifyServer(String source, String uuid, String action, Text reason) {
+        notifyServer(source, uuid, action, reason, null);
+    }
+
+    public static void notifyServer(String source, String uuid, String action, Text reason, JsonObject custom) {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("uuid", uuid);
+        obj.addProperty("action", action);
+        BridgeOut.encodeText(obj, "reason", reason);
+        if (custom != null) obj.add("custom", custom);
+
+        BridgeOut.sendMessageToAllServers("prohibitor", obj);
+        BridgeIn.sendLogMessage(source, reason);
     }
 
     public static String getUUIDFromName(String name) {

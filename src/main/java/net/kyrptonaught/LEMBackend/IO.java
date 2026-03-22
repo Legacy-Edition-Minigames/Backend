@@ -97,6 +97,6 @@ public class IO {
     }
 
     private static String getApiURL() {
-        return "http://localhost:" + LEMBackend.getConfig().port + "/v0/" + LEMBackend.getConfig().secretKey;
+        return "http://localhost:" + LEMBackend.getConfig().port + "/v1/" + LEMBackend.getConfig().secretKey;
     }
 }

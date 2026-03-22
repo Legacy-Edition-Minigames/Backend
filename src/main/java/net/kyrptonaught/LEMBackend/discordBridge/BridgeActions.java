@@ -6,11 +6,14 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
+import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.forums.ForumPost;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 
 public class BridgeActions {
 
@@ -67,5 +70,15 @@ public class BridgeActions {
             jda.getTextChannelById(channel).upsertPermissionOverride(jda.getRoleById(linkRoleID))
                     .grant(Permission.MESSAGE_SEND).queue();
         }
+    }
+
+    public static ForumPost createForumPost(JDA jda, long forumID, String name, MessageCreateData msg) {
+        try {
+            ForumChannel category = jda.getForumChannelById(forumID);
+            return category.createForumPost(name, msg).submit().get();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

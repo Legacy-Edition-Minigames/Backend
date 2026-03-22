@@ -24,10 +24,12 @@ public class KeyValueModule extends Module {
 
     public void setValue(String id, String key, String value) {
         getIdStorage(id).put(key, value);
+        save();
     }
 
     public void resetValue(String id, String key) {
         getIdStorage(id).remove(key);
+        save();
     }
 
     public ConcurrentHashMap<String, String> getIdStorage(String id) {

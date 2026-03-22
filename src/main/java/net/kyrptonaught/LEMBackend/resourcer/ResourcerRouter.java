@@ -2,6 +2,7 @@ package net.kyrptonaught.LEMBackend.resourcer;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
 
@@ -13,10 +14,10 @@ public class ResourcerRouter extends ModuleRouter<ResourcerModule> {
     }
 
     @Override
-    public void addRoutes() {
-        route(HTTP.GET, "/v0/{secret}/resourcer/lang/{version}/{rpversion}/{lang}", this::getLang);
-        route(HTTP.POST, "/v0/{secret}/resourcer/rp/hashs", this::hashRPs);
-        route(HTTP.POST, "/v0/{secret}/resourcer/rp/hash", this::hashRP);
+    public void addRoutes(RoutesConfig routes) {
+        route(routes, HTTP.GET, "/v1/{secret}/resourcer/lang/{version}/{rpversion}/{lang}", this::getLang);
+        route(routes, HTTP.POST, "/v1/{secret}/resourcer/rp/hashs", this::hashRPs);
+        route(routes, HTTP.POST, "/v1/{secret}/resourcer/rp/hash", this::hashRP);
     }
 
     private void hashRPs(Context ctx) {

@@ -9,10 +9,11 @@ public class DiscordBridgeConfig {
     public String playerSkinURL;
 
     public long bridgeCategoryID;
+    public long logCategoryID;
 
     public long linkChannelID;
 
-    public String loggingWebhookURL;
+    public long loggingChannelID;
 
     public long linkRoleID;
     public long moderatorRoleID;

@@ -9,76 +9,86 @@ import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
-import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
-import net.dv8tion.jda.api.components.thumbnail.Thumbnail;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.api.utils.FileUpload;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
-import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorExecuter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class PunishCommand {
     public static String ID = "prohibitor_punish:";
 
     public static void execute(SlashCommandInteraction event) {
         event.deferReply(true).queue();
-        event.getHook().sendMessageComponents(Container.of(buildMessage( "player_name",  "indefinite"))).useComponentsV2().setEphemeral(true).queue();
+        event.getHook().sendMessageComponents(Container.of(buildMessage("player_name", "indefinite", "other"))).useComponentsV2().setEphemeral(true).queue();
     }
 
     public static void selectInteraction(StringSelectInteractionEvent event) {
         String[] key = event.getInteraction().getValues().getFirst().split("---");
-        event.editComponents(Container.of(buildMessage(key[1], key[2]))).useComponentsV2().queue();
+        event.editComponents(Container.of(buildMessage(key[1], key[2], key[3]))).useComponentsV2().queue();
     }
 
     public static void buttonInteraction(ButtonInteractionEvent event) {
-        if(event.getButton().getCustomId().contains("_viewskin_")) event.replyModal(buildRequestSkin(event.getButton().getCustomId())).queue();
-        else event.replyModal(buildModal(event.getButton().getCustomId())).queue();
+        if (event.getButton().getCustomId().contains("_viewskin_")) event.replyModal(buildRequestSkin(event.getButton().getCustomId())).queue();
+        else {
+            Optional<StringSelectMenu> playerID = event.getInteraction().getMessage().getComponentTree().find(StringSelectMenu.class, stringSelectMenu -> stringSelectMenu.getCustomId().equals("intermediary_player_id"));
+            if (playerID.isPresent()) event.replyModal(buildModal(event.getButton().getCustomId(), playerID.get().getOptions().getFirst().getValue())).queue();
+            else event.replyModal(buildModal(event.getButton().getCustomId(), null)).queue();
+        }
     }
 
     public static void modalSubmit(ModalInteractionEvent event) {
-        event.deferReply(true).queue();
+        event.deferEdit().queue();
         String id = event.getCustomId();
 
         String player_uuid = null;
 
-        if (id.contains( "player_uuid")) {
-            player_uuid = event.getValue( "player_id").getAsString();
+        if (id.contains("player_uuid")) {
+            player_uuid = event.getValue("player_id").getAsString();
         } else if (id.contains("player_name")) {
             player_uuid = ProhibitorModule.getUUIDFromName(event.getValue("player_id").getAsString());
-        } else if (id.contains( "player_discord")) {
-            long discord = event.getValue( "player_id").getAsLongList().getFirst();
+        } else if (id.contains("player_discord")) {
+            long discord = event.getValue("player_id").getAsLongList().getFirst();
             player_uuid = LinkingManager.getMCFromDiscord(discord);
         }
 
         if (id.contains("_viewskin_")) {
-            event.getHook().editOriginalComponents(Container.of(buildViewSkin(player_uuid))).useComponentsV2().queue();
+            event.getHook().sendMessageComponents(Container.of(buildViewSkin(player_uuid))).useComponentsV2().setEphemeral(true).queue();
+            return;
+        }
+
+        if (id.contains("_action_submit")) {
+            String banDuration = event.getValue(ID + "ban_duration").getAsStringList().getFirst();
+            String reasonPreset = event.getValue(ID + "reason_preset").getAsStringList().getFirst();
+            String punishType = event.getValue(ID + "punishment_type").getAsStringList().getFirst();
+            event.getHook().sendMessageComponents(Container.of(buildIntermediary(player_uuid, punishType, banDuration.split("---")[2], reasonPreset.split("---")[3]))).useComponentsV2().setEphemeral(true).queue();
             return;
         }
 
         String who = event.getMember().getEffectiveName() + " - Discord";
         String source = event.getGuild().getName() + " - Discord";
-        String reason = event.getValue( "reason").getAsString();
+        String reason = event.getValue("reason").getAsString();
 
-        List<Message.Attachment> attachments = event.getValue( "evidence").getAsAttachmentList();
+        List<Message.Attachment> attachments = event.getValue("evidence").getAsAttachmentList();
         String[] evidence = new String[attachments.size()];
 
         for (int i = 0; i < attachments.size(); i++) {
@@ -89,72 +99,66 @@ public class PunishCommand {
             player_uuid = event.getValue("player_id").getAsString();
             if (id.contains("_ban_")) {
                 if (id.contains("indefinite")) {
-                    ProhibitorExecuter.permaBan(ID_TYPE.IP, player_uuid, who, source, reason, evidence);
+                    BanAction.permaBan(ID_TYPE.IP, player_uuid, who, source, reason, evidence);
                 } else {
-                    int durationTime = Integer.parseInt(event.getValue( "duration_time").getAsString());
+                    int durationTime = Integer.parseInt(event.getValue("duration_time").getAsString());
                     byte durationType = Byte.parseByte(id.split("---")[2].split("_")[2]);
-                    ProhibitorExecuter.tempBan(ID_TYPE.IP, player_uuid, who, source, reason, durationTime, durationType, evidence);
+                    BanAction.tempBan(ID_TYPE.IP, player_uuid, who, source, reason, durationTime, durationType, evidence);
                 }
             }
         } else {
             if (id.contains("_ban_")) {
-                String id_type = String.join("-", event.getValue( ID + "punishment_id_type").getAsStringList());
-                if (id.contains( "player_ip")) id_type =  "_ip_";
+                String id_type = String.join("-", event.getValue(ID + "punishment_id_type").getAsStringList());
+                if (id.contains("player_ip")) id_type = "_ip_";
 
                 if (id.contains("indefinite")) {
-                    ProhibitorModule.multiPermBan(id_type, player_uuid, who, source, reason, evidence);
+                    BanAction.multiPermBan(id_type, player_uuid, who, source, reason, evidence);
                 } else {
-                    int durationTime = Integer.parseInt(event.getValue( "duration_time").getAsString());
+                    int durationTime = Integer.parseInt(event.getValue("duration_time").getAsString());
                     byte durationType = Byte.parseByte(id.split("---")[2].split("_")[1]);
-                    ProhibitorModule.multiTempBan(id_type, player_uuid, who, source, reason, durationTime, durationType, evidence);
+                    BanAction.multiTempBan(id_type, player_uuid, who, source, reason, durationTime, durationType, evidence);
                 }
             } else if (id.contains("_mute_")) {
-                if (id.contains("indefinite")) ProhibitorExecuter.permaMute(player_uuid, who, source, reason, evidence);
+                if (id.contains("indefinite")) MuteAction.permaMute(player_uuid, who, source, reason, evidence);
                 else {
-                    int durationTime = Integer.parseInt(event.getValue( "duration_time").getAsString());
+                    int durationTime = Integer.parseInt(event.getValue("duration_time").getAsString());
                     byte durationType = Byte.parseByte(id.split("---")[2].split("_")[1]);
-                    ProhibitorExecuter.tempMute(player_uuid, who, source, reason, durationTime, durationType, evidence);
+                    MuteAction.tempMute(player_uuid, who, source, reason, durationTime, durationType, evidence);
                 }
-            } else if (id.contains("_kick_")) ProhibitorExecuter.kick(player_uuid, who, source, reason, evidence);
-            else if (id.contains("_warn_")) ProhibitorExecuter.warn(player_uuid, who, source, reason, evidence);
-            else if (id.contains("_sus_")) ProhibitorExecuter.sus(player_uuid, who, source, reason, evidence);
-            else if (id.contains("_whitelist_")) ProhibitorExecuter.whitelist(player_uuid, who, source, reason);
-            else if (id.contains("_skinban_")) ProhibitorModule.skinBan(player_uuid, who, source, reason, evidence);
+            } else if (id.contains("_kick_")) KickAction.kick(player_uuid, who, source, reason, evidence);
+            else if (id.contains("_warn_")) WarnAction.warn(player_uuid, who, source, reason, evidence);
+            else if (id.contains("_sus_")) SusAction.sus(player_uuid, who, source, reason, evidence);
+            else if (id.contains("_whitelist_")) WhitelistAction.whitelist(player_uuid, who, source, reason);
+            else if (id.contains("_skinban_")) SkinBanAction.skinBan(player_uuid, who, source, reason, evidence);
         }
 
-        event.getHook().editOriginal("Success!").queue();
+        event.getHook().sendMessage("Success!").setEphemeral(true).queue();
     }
 
-    private static List<ContainerChildComponent> buildMessage(String playerLookupType, String durationType) {
+    private static List<ContainerChildComponent> buildMessage(String playerLookupType, String durationType, String reasonPreset) {
         List<ContainerChildComponent> container = new ArrayList<>();
-        String key = "---" + playerLookupType + "---" + durationType + "---";
+        String key = "---" + playerLookupType + "---" + durationType + "---" + reasonPreset + "---";
 
         container.add(ProhibitorDiscordCommands.getTitle("Issue a Punishment"));
         container.add(Separator.createInvisible(Separator.Spacing.LARGE));
 
         container.add(TextDisplay.of("Player ID Type:"));
         container.add(ActionRow.of(StringSelectMenu.create(ID + "player_id_type")
-                .addOption("MC Name", "---" + "player_name" + "---" + durationType + "---")
-                .addOption("MC UUID", "---" + "player_uuid" + "---" + durationType + "---")
-                .addOption("Discord", "---" + "player_discord" + "---" + durationType + "---")
-                .addOption("IP (Only For Bans)", "---" + "player_ip" + "---" + durationType + "---")
+                .addOption("MC Name", "---" + "player_name" + "---" + durationType + "---" + reasonPreset + "---")
+                .addOption("MC UUID", "---" + "player_uuid" + "---" + durationType + "---" + reasonPreset + "---")
+                .addOption("Discord", "---" + "player_discord" + "---" + durationType + "---" + reasonPreset + "---")
+                .addOption("IP (Only For Bans)", "---" + "player_ip" + "---" + durationType + "---" + reasonPreset + "---")
                 .setPlaceholder("Player ID Type")
                 .setDefaultValues(key)
                 .setRequired(true).build()));
 
         container.add(TextDisplay.of("Punishment Duration:"));
         container.add(TextDisplay.of("-# Applicable to Bans/Mutes"));
-        container.add(ActionRow.of(StringSelectMenu.create(ID + "ban_duration")
-                .addOption("Indefinite", "---" + playerLookupType + "---" + "indefinite" + "---")
-                .addOption("Second(s)", "---" + playerLookupType + "---" + "second_" + ChronoUnit.SECONDS.ordinal() + "---")
-                .addOption("Minute(s)", "---" + playerLookupType + "---" + "minute_" + ChronoUnit.MINUTES.ordinal() + "---")
-                .addOption("Hour(s)", "---" + playerLookupType + "---" + "hour_" + ChronoUnit.HOURS.ordinal() + "---")
-                .addOption("Day(s)", "---" + playerLookupType + "---" + "day_" + ChronoUnit.DAYS.ordinal() + "---")
-                .addOption("Month(s)", "---" + playerLookupType + "---" + "month_" + ChronoUnit.MONTHS.ordinal() + "---")
-                .addOption("Year(s)", "---" + playerLookupType + "---" + "year_" + ChronoUnit.YEARS.ordinal() + "---")
-                .setPlaceholder("Duration")
-                .setDefaultValues(key)
-                .setRequired(true).build()));
+        container.add(ActionRow.of(durationSelect(key, playerLookupType, reasonPreset).setRequired(true).build()));
+
+        container.add(TextDisplay.of("Punishment Reason Preset:"));
+        container.add(ActionRow.of(reasonSelect(key, playerLookupType, durationType).setRequired(true).build()));
+
         container.add(Separator.createDivider(Separator.Spacing.LARGE));
 
         if (playerLookupType.contains("player_ip")) {
@@ -173,17 +177,18 @@ public class PunishCommand {
         return container;
     }
 
-    private static Modal buildModal(String button) {
+    private static Modal buildModal(String button, String playerID) {
         List<ModalTopLevelComponent> container = new ArrayList<>();
+        String[] key = button.split("---");
 
         if (button.contains("player_name"))
-            container.add(Label.of("Player's MC Name: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC Name").setRequired(true).build()));
+            container.add(Label.of("Player's MC Name: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC Name").setValue(playerID).setRequired(true).build()));
         else if (button.contains("player_uuid"))
-            container.add(Label.of("Player's MC UUID: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC UUID").setRequired(true).build()));
+            container.add(Label.of("Player's MC UUID: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("MC UUID").setValue(playerID).setRequired(true).build()));
         else if (button.contains("player_discord"))
-            container.add(Label.of("Player's Discord: ", EntitySelectMenu.create("player_id", EntitySelectMenu.SelectTarget.USER).setRequired(true).build()));
+            container.add(Label.of("Player's Discord: ", discordSelect(playerID).setRequired(true).build()));
         else if (button.contains("player_ip"))
-            container.add(Label.of("Player's IP: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("IP").setRequired(true).build()));
+            container.add(Label.of("Player's IP: ", TextInput.create("player_id", TextInputStyle.SHORT).setPlaceholder("IP").setValue(playerID).setRequired(true).build()));
 
         if (button.contains("_ban_") && !button.contains("player_ip")) {
             container.add(Label.of("Ban Type: ", StringSelectMenu.create(ID + "punishment_id_type")
@@ -194,15 +199,64 @@ public class PunishCommand {
         }
 
         if (!button.contains("indefinite")) {
-            String desc = ChronoUnit.values()[Byte.parseByte(button.split("---")[2].split("_")[1])].toString().replace("s", "(s)");
+            String desc = ChronoUnit.values()[Byte.parseByte(key[2].split("_")[1])].toString().replace("s", "(s)");
             container.add(Label.of(desc + ": ", TextInput.create("duration_time", TextInputStyle.SHORT).setPlaceholder("Duration").setRequired(true).build()));
         }
 
-        container.add(Label.of("Reason: ", TextInput.create("reason", TextInputStyle.PARAGRAPH).setPlaceholder("Reason").setRequired(true).build()));
+        container.add(Label.of("Reason: ", TextInput.create("reason", TextInputStyle.PARAGRAPH).setPlaceholder("Reason").setValue(getReasonPreset(key[3])).setRequired(true).build()));
 
         container.add(Label.of("Evidence: ", AttachmentUpload.create("evidence").setRequired(false).setMaxValues(10).build()));
 
         return Modal.create(button + "_submit", getModalLabel(button)).addComponents(container).build();
+    }
+
+    public static Modal buildActionModal(String playerLookupType, String playerID) {
+        String key = "---" + playerLookupType + "---" + "indefinite" + "---" + "other" + "---";
+        List<ModalTopLevelComponent> container = new ArrayList<>();
+
+        if (playerLookupType.contains("player_name"))
+            container.add(Label.of("Player's MC Name: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(playerID).setRequired(true).build()));
+        else if (playerLookupType.contains("player_uuid"))
+            container.add(Label.of("Player's MC UUID: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(playerID).setRequired(true).build()));
+        else if (playerLookupType.contains("player_discord"))
+            container.add(Label.of("Player's Discord: ", discordSelect(playerID).setRequired(true).build()));
+        else if (playerLookupType.contains("player_ip"))
+            container.add(Label.of("Player's IP: ", TextInput.create("player_id", TextInputStyle.SHORT).setValue(playerID).setRequired(true).build()));
+
+        container.add(Label.of("Punishment Type", StringSelectMenu.create(ID + "punishment_type")
+                .addOption("Perm Ban", "_ban_indefinite_")
+                .addOption("Temp Ban", "_ban_")
+                .addOption("Perm Mute", "_mute_indefinite_")
+                .addOption("Temp Mute", "_mute_")
+                .addOption("Skin Ban", "_skinban_")
+                .addOption("Whitelist", "_whitelist_")
+                .addOption("Warning", "_warn_")
+                .addOption("Kick", "_kick_")
+                .addOption("Sus", "_sus_")
+                .setRequired(true).build()));
+
+        container.add(Label.of("Punishment Duration:", durationSelect(key, playerLookupType, "other").setRequired(true).build()));
+        container.add(Label.of("Punishment Reason Preset:", reasonSelect(key, playerLookupType, "indefinite").setRequired(true).build()));
+
+        return Modal.create(ID + key + "_action_submit", "Issue a Punishment").addComponents(container).build();
+    }
+
+    private static List<ContainerChildComponent> buildIntermediary(String playerID, String punishmentType, String durationType, String reasonPreset) {
+        List<ContainerChildComponent> container = new ArrayList<>();
+        String key = "---" + "player_uuid" + "---" + durationType + "---" + reasonPreset + "---";
+
+        container.add(ProhibitorDiscordCommands.getTitle("Issue a Punishment"));
+        container.add(Separator.createInvisible(Separator.Spacing.SMALL));
+
+        container.add(TextDisplay.of("Player's Name: " + ProhibitorModule.getNameFromUUID(playerID)));
+
+        container.add(TextDisplay.of("Player's UUID: "));
+        container.add(ActionRow.of(StringSelectMenu.create("intermediary_player_id").addOption(playerID, playerID).setDefaultValues(playerID).setRequired(true).setDisabled(true).build()));
+        container.add(Separator.createInvisible(Separator.Spacing.SMALL));
+
+        container.add(ActionRow.of(Button.primary(ID + "button" + punishmentType + key, getModalLabel(punishmentType))));
+
+        return container;
     }
 
     private static Modal buildRequestSkin(String button) {
@@ -225,10 +279,10 @@ public class PunishCommand {
         container.add(ProhibitorDiscordCommands.getTitle("View Skin"));
         container.add(Separator.createDivider(Separator.Spacing.LARGE));
 
-        String url = ProhibitorModule.getPlayerSkin(uuid);
+        String url = SkinBanAction.getPlayerSkin(uuid);
 
         container.add(TextDisplay.of("## *" + uuid + "*'s skin"));
-        ProhibitorModule.generateSkinRender(url);
+        SkinBanAction.generateSkinRender(url);
         container.add(MediaGallery.of(MediaGalleryItem.fromFile(FileUpload.fromData(ProhibitorModule.getSkinRenderPath(url))).withDescription(url)));
         return container;
     }
@@ -239,6 +293,7 @@ public class PunishCommand {
         else if (button.contains("_warn_")) out.append("Warn ");
         else if (button.contains("_whitelist_")) out.append("Whitelist ");
         else if (button.contains("_sus_")) out.append("Sus ");
+        else if (button.contains("_skinban_")) out.append("Skin Ban ");
         else {
             if (button.contains("indefinite")) out.append("Permanently ");
             else out.append("Temporarily ");
@@ -249,5 +304,57 @@ public class PunishCommand {
 
         out.append("a Player");
         return out.toString();
+    }
+
+    private static String getReasonPreset(String preset) {
+        return switch (preset) {
+            case "idle" -> "Idle/AFK";
+            case "slur" -> "Slur usage is strictly prohibited on this server";
+            case "toxic" -> "Toxicity";
+            case "nsfw" -> "NSFW/Inapropriate Content";
+            case "spam" -> "Spamming";
+            case "harassment" -> "Harassment";
+            case "racist" -> "Racism/Facism/Descrimination/Political";
+            case "comp" -> "Compromised Account";
+            case "cheat" -> "Cheating";
+            case "rot" -> "Rot";
+            default -> null;
+        };
+    }
+
+    private static StringSelectMenu.Builder durationSelect(String key, String playerLookupType, String reasonPreset) {
+        return StringSelectMenu.create(ID + "ban_duration")
+                .addOption("Indefinite", "---" + playerLookupType + "---" + "indefinite" + "---" + reasonPreset + "---")
+                .addOption("Second(s)", "---" + playerLookupType + "---" + "second_" + ChronoUnit.SECONDS.ordinal() + "---" + reasonPreset + "---")
+                .addOption("Minute(s)", "---" + playerLookupType + "---" + "minute_" + ChronoUnit.MINUTES.ordinal() + "---" + reasonPreset + "---")
+                .addOption("Hour(s)", "---" + playerLookupType + "---" + "hour_" + ChronoUnit.HOURS.ordinal() + "---" + reasonPreset + "---")
+                .addOption("Day(s)", "---" + playerLookupType + "---" + "day_" + ChronoUnit.DAYS.ordinal() + "---" + reasonPreset + "---")
+                .addOption("Month(s)", "---" + playerLookupType + "---" + "month_" + ChronoUnit.MONTHS.ordinal() + "---" + reasonPreset + "---")
+                .addOption("Year(s)", "---" + playerLookupType + "---" + "year_" + ChronoUnit.YEARS.ordinal() + "---" + reasonPreset + "---")
+                .setPlaceholder("Duration")
+                .setDefaultValues(key);
+    }
+
+    private static StringSelectMenu.Builder reasonSelect(String key, String playerLookupType, String durationType) {
+        return StringSelectMenu.create(ID + "reason_preset")
+                .addOption("Other", "---" + playerLookupType + "---" + durationType + "---" + "other" + "---")
+                .addOption("Idle/AFK", "---" + playerLookupType + "---" + durationType + "---" + "idle" + "---")
+                .addOption("Slur", "---" + playerLookupType + "---" + durationType + "---" + "slur" + "---")
+                .addOption("Toxicity", "---" + playerLookupType + "---" + durationType + "---" + "toxic" + "---")
+                .addOption("NSFW Content", "---" + playerLookupType + "---" + durationType + "---" + "nsfw" + "---")
+                .addOption("Spamming", "---" + playerLookupType + "---" + durationType + "---" + "spam" + "---")
+                .addOption("Harassment", "---" + playerLookupType + "---" + durationType + "---" + "harassment" + "---")
+                .addOption("Racism/Facism/Descrimination/Political", "---" + playerLookupType + "---" + durationType + "---" + "racist" + "---")
+                .addOption("Compromised Account", "---" + playerLookupType + "---" + durationType + "---" + "comp" + "---")
+                .addOption("Cheating", "---" + playerLookupType + "---" + durationType + "---" + "cheat" + "---")
+                .addOption("Rot", "---" + playerLookupType + "---" + durationType + "---" + "rot" + "---")
+                .setPlaceholder("Reason")
+                .setDefaultValues(key);
+    }
+
+    public static EntitySelectMenu.Builder discordSelect(String playerID) {
+        EntitySelectMenu.Builder builder = EntitySelectMenu.create("player_id", EntitySelectMenu.SelectTarget.USER);
+        if (playerID != null) builder.setDefaultValues(EntitySelectMenu.DefaultValue.from(BridgeModule.jda.getUserById(playerID)));
+        return builder;
     }
 }

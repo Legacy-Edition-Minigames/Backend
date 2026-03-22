@@ -1,5 +1,6 @@
 package net.kyrptonaught.LEMBackend;
 
+import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import io.javalin.websocket.WsContext;
 
@@ -22,13 +23,13 @@ public abstract class ModuleRouter<T extends Module> {
         this.module = module;
     }
 
-    public void addRoutes() {
+    public void addRoutes(RoutesConfig routes) {
 
     }
 
-    public void route(HTTP method, String route, Consumer<Context> execute) {
-        if (method == HTTP.POST) LEMBackend.app.post(route, context -> checkSecret(context, execute));
-        else if (method == HTTP.GET) LEMBackend.app.get(route, context -> checkSecret(context, execute));
+    public void route(RoutesConfig routes, HTTP method, String route, Consumer<Context> execute) {
+        if (method == HTTP.POST) routes.post(route, context -> checkSecret(context, execute));
+        else if (method == HTTP.GET) routes.get(route, context -> checkSecret(context, execute));
     }
 
     public void checkSecret(Context ctx, Consumer<Context> execute) {

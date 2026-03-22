@@ -19,18 +19,26 @@ public class BanEntry {
 
     public StampEntry revokedSource;
 
-    private BanEntry(String reason, String source, String source2) {
-        this.banSource = new StampEntry(source, source2, Instant.now(), reason);
+    private BanEntry(StampEntry stamp) {
+        this.banSource = stamp;
     }
 
     public static BanEntry PermaBan(String reason, String who, String source) {
-        BanEntry entry = new BanEntry(reason, who, source);
+        return PermaBan(new StampEntry(who, source, Instant.now(), reason));
+    }
+
+    public static BanEntry PermaBan(StampEntry stamp) {
+        BanEntry entry = new BanEntry(stamp);
         entry.permanent = true;
         return entry;
     }
 
     public static BanEntry TempBan(String reason, int duration_time, byte duration_type, String who, String source) {
-        BanEntry entry = new BanEntry(reason, who, source);
+        return TempBan(new StampEntry(who, source, Instant.now(), reason), duration_time, duration_type);
+    }
+
+    public static BanEntry TempBan(StampEntry stamp, int duration_time, byte duration_type) {
+        BanEntry entry = new BanEntry(stamp);
         entry.permanent = false;
         entry.duration_time = duration_time;
         entry.duration_type = duration_type;

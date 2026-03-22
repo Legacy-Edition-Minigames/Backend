@@ -1,5 +1,6 @@
 package net.kyrptonaught.LEMBackend.userConfig;
 
+import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
 
@@ -11,9 +12,9 @@ public class UserConfigRouter extends ModuleRouter<UserConfigModule> {
     }
 
     @Override
-    public void addRoutes() {
-        route(HTTP.GET, "/v0/{secret}/getUserConfig/{uuid}", this::getUserConfig);
-        route(HTTP.POST, "/v0/{secret}/syncUserConfig/{uuid}", this::syncUserConfig);
+    public void addRoutes(RoutesConfig routes) {
+        route(routes, HTTP.GET, "/v1/{secret}/getUserConfig/{uuid}", this::getUserConfig);
+        route(routes, HTTP.POST, "/v1/{secret}/syncUserConfig/{uuid}", this::syncUserConfig);
     }
 
     public void getUserConfig(Context ctx) {
