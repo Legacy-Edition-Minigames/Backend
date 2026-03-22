@@ -21,7 +21,7 @@ dependencies {
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
 
 	//Discord Bridge
-	shadow implementation("net.dv8tion:JDA:6.3.1") { exclude module: 'opus-java' }
+	shadow implementation("net.dv8tion:JDA:6.3.2") { exclude module: 'opus-java' }
 
 	//Javalin
 	shadow implementation("io.javalin:javalin:7.0.1")
