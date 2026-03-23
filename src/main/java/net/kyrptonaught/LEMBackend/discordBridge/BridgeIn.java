@@ -93,8 +93,8 @@ public class BridgeIn {
     }
 
     public static void handleServerLog(String bridge, JsonObject obj) {
-        String msg = obj.get("msg").toString();
-        handleServerLog(BridgeModule.servers.get(bridge).logChannelWebhook, msg.substring(1, msg.length() - 5));
+        String msg = FormatToDiscord.escapeFormatting(obj.get("msg").toString().replaceAll("\\\\r\\\\n\"$", "").replaceAll("\\\\n\"$", "").substring(1));
+        handleServerLog(BridgeModule.servers.get(bridge).logChannelWebhook, msg);
     }
 
     public static void handleServerLog(Webhook webhook, String msg) {

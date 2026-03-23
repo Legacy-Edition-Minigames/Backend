@@ -55,7 +55,9 @@ public class FormatToDiscord {
         return word
                 .replaceAll("_", "\\\\_")
                 .replaceAll("\\*", "\\\\*")
-                .replaceAll("~", "\\\\");
+                .replaceAll("~", "\\\\~")
+                .replaceAll("`", "\\\\`")
+                .replaceAll(">", "\\\\>");
     }
 
     public static String getUserHeadURL(String url, String name, String uuid) {
