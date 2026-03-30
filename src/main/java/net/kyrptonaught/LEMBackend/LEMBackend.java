@@ -50,6 +50,7 @@ public class LEMBackend implements ModInitializer {
 
         app = Javalin.create((config) -> {
                     config.startup.showJavalinBanner = false;
+                    config.concurrency.useVirtualThreads = true;
                     config.jsonMapper(new GsonMapper(gson));
 
                     load(config.routes, ProhibitorModule);

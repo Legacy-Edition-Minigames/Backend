@@ -1,19 +1,23 @@
 package net.kyrptonaught.LEMBackend.prohibitor;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+import net.dv8tion.jda.api.components.separator.Separator;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.kyrptonaught.LEMBackend.FileHelper;
 import net.kyrptonaught.LEMBackend.IO;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
-import net.kyrptonaught.LEMBackend.discordBridge.BridgeIn;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
 import net.kyrptonaught.LEMBackend.discordBridge.PatreonTier;
 import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.discordCommands.ViewCommand;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.*;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -21,6 +25,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProhibitorModule extends Module {
     public ProhibitorModule() {
@@ -41,9 +47,12 @@ public class ProhibitorModule extends Module {
         response.addProperty("isBanned", banStatus != null);
         if (banStatus != null) BridgeOut.encodeText(response, "banMessage", banStatus);
 
-        Text muteStatus = checkPlayerEntryMutes(uuidEntry, now);
-        response.addProperty("isMuted", muteStatus != null);
-        if (muteStatus != null) BridgeOut.encodeText(response, "muteMessage", muteStatus);
+        BanEntry muteEntry = uuidEntry.isActiveMute(now);
+        response.addProperty("isMuted", muteEntry != null);
+        if (muteEntry != null) {
+            BridgeOut.encodeText(response, "muteMessage", MuteAction.getMuteText(muteEntry, now));
+            response.addProperty("muteDuration", muteEntry.getRemaining(now));
+        }
 
         Text skinStatus = checkPlayerSkinBans(uuidEntry, skin);
         response.addProperty("isSkinBanned", skinStatus != null);
@@ -98,17 +107,25 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    public static boolean canPlayerChat(String uuid) {
-        PlayerEntry entry = loadUUID(uuid);
+    public static void tickPlayerMutes(JsonArray arr) {
+        Instant now = Instant.now();
+        for (JsonElement element : arr) {
+            String uuid = element.getAsString();
+            PlayerEntry entry = loadUUID(uuid);
 
-        return entry.isActiveMute(Instant.now()) == null;
+            if (entry.isActiveMute(now) == null) {
+                MuteAction.muteExpire("", entry);
+                saveEntry(entry);
+            }
+        }
     }
+
 
     private static Text checkPlayerSkinBans(PlayerEntry entry, String skin) {
         SkinBanEntry banEntry = entry.isActiveSkinBan(skin);
         if (banEntry != null) {
             return Text.translatable("gui.banned.skin.title").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatable("punishment.reason", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW)));
+                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW)));
         }
         return null;
     }
@@ -116,9 +133,7 @@ public class ProhibitorModule extends Module {
     private static Text checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
         BanEntry banEntry = entry.isActiveBan(now);
         if (banEntry != null) {
-            return Text.translatable("multiplayer.disconnect.banned").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatable("punishment.reason", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW))).append("\n")
-                    .append(Text.translatable("punishment.expires", banEntry.getDurationText().formatted(Formatting.YELLOW)));
+            return BanAction.getBanText(banEntry, now);
         }
 
         if (entry.id_type == ID_TYPE.UUID) {
@@ -134,18 +149,8 @@ public class ProhibitorModule extends Module {
         return null;
     }
 
-    private static Text checkPlayerEntryMutes(PlayerEntry entry, Instant now) {
-        BanEntry banEntry = entry.isActiveMute(now);
-        if (banEntry != null) {
-            return Text.translatable("prohibitor.mute.cannotsent").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatable("punishment.reason", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW))).append("\n")
-                    .append(Text.translatable("punishment.expires", banEntry.getDurationText().formatted(Formatting.YELLOW)));
-        }
-        return null;
-    }
-
     public static void multiRevoke(String id_types, String uuid, String who, String source, String reason) {
-        if (id_types.contains("_b_")) BanAction.revokeBans(uuid, who, source, reason);
+        if (id_types.contains("_b_")) BanAction.revokeUUIDBans(uuid, who, source, reason);
         if (id_types.contains("_m_")) MuteAction.revokeMutes(uuid, who, source, reason);
         if (id_types.contains("_sb_")) SkinBanAction.revokeSkinBan(uuid, who, source, reason);
         if (id_types.contains("_wl_")) WhitelistAction.revokeWhitelist(uuid, who, source, reason);
@@ -206,19 +211,28 @@ public class ProhibitorModule extends Module {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("SKINRENDERS").resolve(url.substring(38) + ".png");
     }
 
-    public static void notifyServer(String source, String uuid, String action, Text reason) {
-        notifyServer(source, uuid, action, reason, null);
+    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Text msg) {
+        notifyServer(source, action, entry, banEntry, msg, null);
     }
 
-    public static void notifyServer(String source, String uuid, String action, Text reason, JsonObject custom) {
+    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Text msg, JsonObject custom) {
         JsonObject obj = new JsonObject();
-        obj.addProperty("uuid", uuid);
-        obj.addProperty("action", action);
-        BridgeOut.encodeText(obj, "reason", reason);
+        obj.addProperty("uuid", entry.associatedUUID);
+        obj.addProperty("action", action.name());
+        BridgeOut.encodeText(obj, "reason", msg);
         if (custom != null) obj.add("custom", custom);
-
+        if (action == Actions.MUTE) obj.addProperty("muteDuration", ((BanEntry) banEntry).getRemaining(Instant.now()));
         BridgeOut.sendMessageToAllServers("prohibitor", obj);
-        BridgeIn.sendLogMessage(source, reason);
+
+        List<ContainerChildComponent> container = new ArrayList<>();
+        container.add(ProhibitorDiscordCommands.getTitle("Punishment Issued"));
+        container.add(Separator.createDivider(Separator.Spacing.LARGE));
+
+        ViewCommand.buildPunishment(container, action, banEntry);
+        container.add(3, Separator.createInvisible(Separator.Spacing.SMALL));
+        container.add(4, TextDisplay.of("**Player:** " + entry.associatedName + " (" + entry.associatedUUID + ")"));
+        container.add(5, TextDisplay.of("**Source:** " + source));
+        BridgeModule.adminLogWebhook.sendMessageComponents(Container.of(container)).useComponentsV2().queue();
     }
 
     public static String getUUIDFromName(String name) {

@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class StampEntry {
+public final class StampEntry implements Entry {
     public final String who;
     public final String where;
     public Instant when;

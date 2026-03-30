@@ -17,7 +17,7 @@ public class IO {
     public static HttpClient client;
 
     public static void onInitialize() {
-        executorService = Executors.newFixedThreadPool(2);
+        executorService = Executors.newVirtualThreadPerTaskExecutor();
         client = HttpClient.newBuilder()
                 .executor(executorService)
                 .version(HttpClient.Version.HTTP_1_1)

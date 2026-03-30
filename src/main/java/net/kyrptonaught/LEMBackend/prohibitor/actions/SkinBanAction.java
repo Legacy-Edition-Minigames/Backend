@@ -10,9 +10,12 @@ import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.LenientJsonParser;
 
+import java.time.Instant;
 import java.util.Base64;
 
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.loadUUID;
@@ -29,11 +32,12 @@ public class SkinBanAction {
 
     public static void skinBan(String uuid, String skin, String who, String source, String reason, String... evidence) {
         PlayerEntry entry = loadUUID(uuid);
-        entry.skinBans.add(new SkinBanEntry(skin, who, source, reason).addEvidence(evidence));
+        SkinBanEntry actionEntry = new SkinBanEntry(skin, who, source, reason).addEvidence(evidence);
+        entry.skinBans.add(actionEntry);
         generateSkinRender(skin);
 
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, uuid, "kick", Text.translatable("commands.skinban.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
+        ProhibitorModule.notifyServer(source, Actions.SKINBAN, entry, actionEntry, getBanText(actionEntry));
     }
 
 
@@ -41,7 +45,7 @@ public class SkinBanAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.skinBans.clear();
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, uuid, "unskinban", Text.translatable("commands.skinban.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
+        ProhibitorModule.notifyServer(source, Actions.UNSKINBAN, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
     }
 
     public static String getPlayerSkin(String uuid) {
@@ -59,5 +63,13 @@ public class SkinBanAction {
     public static void generateSkinRender(String url) {
         String api = "https://starlightskins.lunareclipse.studio/render/custom/steve/full?wideModel=https://raw.githubusercontent.com/kyrptonaught/Minigame-Resources/refs/heads/2.0/double.obj&cameraPosition={%22x%22:%220%22,%22y%22:%2220%22,%22z%22:%22-40%22}&skinUrl=" + url;
         FileHelper.download(api, ProhibitorModule.getSkinRenderPath(url));
+    }
+
+    public static Text getBanText(SkinBanEntry banEntry) {
+        if (banEntry != null) {
+            return Text.translatable("gui.banned.skin.title").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
+                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW)));
+        }
+        return null;
     }
 }

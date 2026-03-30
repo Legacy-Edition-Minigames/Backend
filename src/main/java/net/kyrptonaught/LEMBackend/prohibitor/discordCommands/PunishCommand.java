@@ -198,7 +198,7 @@ public class PunishCommand {
                     .setDefaultValues("_uuid_", "_ip_").setRequiredRange(1, 3).setRequired(true).build()));
         }
 
-        if (!button.contains("indefinite")) {
+        if (!button.contains("indefinite") && (button.contains("button_ban_") || button.contains("button_mute_"))) {
             String desc = ChronoUnit.values()[Byte.parseByte(key[2].split("_")[1])].toString().replace("s", "(s)");
             container.add(Label.of(desc + ": ", TextInput.create("duration_time", TextInputStyle.SHORT).setPlaceholder("Duration").setRequired(true).build()));
         }
@@ -325,7 +325,6 @@ public class PunishCommand {
     private static StringSelectMenu.Builder durationSelect(String key, String playerLookupType, String reasonPreset) {
         return StringSelectMenu.create(ID + "ban_duration")
                 .addOption("Indefinite", "---" + playerLookupType + "---" + "indefinite" + "---" + reasonPreset + "---")
-                .addOption("Second(s)", "---" + playerLookupType + "---" + "second_" + ChronoUnit.SECONDS.ordinal() + "---" + reasonPreset + "---")
                 .addOption("Minute(s)", "---" + playerLookupType + "---" + "minute_" + ChronoUnit.MINUTES.ordinal() + "---" + reasonPreset + "---")
                 .addOption("Hour(s)", "---" + playerLookupType + "---" + "hour_" + ChronoUnit.HOURS.ordinal() + "---" + reasonPreset + "---")
                 .addOption("Day(s)", "---" + playerLookupType + "---" + "day_" + ChronoUnit.DAYS.ordinal() + "---" + reasonPreset + "---")

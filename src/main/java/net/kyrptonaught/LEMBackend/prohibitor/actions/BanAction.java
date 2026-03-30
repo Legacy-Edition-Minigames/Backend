@@ -4,7 +4,9 @@ import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 import java.time.Instant;
 
@@ -37,18 +39,20 @@ public class BanAction {
     }
 
     public static void permaBan(PlayerEntry entry, String who, String source, String reason, Instant now, String... evidence) {
-        entry.bans.addFirst(BanEntry.PermaBan(reason, who, source).updateWhen(now).addEvidence(evidence));
+        BanEntry banEntry = BanEntry.PermaBan(reason, who, source).updateWhen(now).addEvidence(evidence);
+        entry.bans.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, entry.associatedUUID, "ban", Text.literal(entry.id_type.name() + " ").append(Text.translatable("commands.ban.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who)));
+        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getBanText(banEntry, now));
     }
 
     public static void tempBan(PlayerEntry entry, String who, String source, String reason, int duration_time, byte duration_type, Instant now, String... evidence) {
-        entry.bans.addFirst(BanEntry.TempBan(reason, duration_time, duration_type, who, source).updateWhen(now).addEvidence(evidence));
+        BanEntry banEntry = BanEntry.TempBan(reason, duration_time, duration_type, who, source).updateWhen(now).addEvidence(evidence);
+        entry.bans.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, entry.associatedUUID, "ban", Text.literal(entry.id_type.name() + " ").append(Text.translatable("commands.ban.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who)));
+        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getBanText(banEntry, now));
     }
 
-    public static void revokeBans(String uuid, String who, String source, String reason) {
+    public static void revokeUUIDBans(String uuid, String who, String source, String reason) {
         PlayerEntry entry = loadUUID(uuid);
         Instant now = Instant.now();
         for (BanEntry ban : entry.bans) {
@@ -57,6 +61,39 @@ public class BanAction {
                 ban.revoke(who, source, reason);
         }
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, entry.associatedUUID, "unban", Text.literal(entry.id_type.name() + " ").append(Text.translatable("commands.unban.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who)));
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+    }
+
+    public static void revokeNAMEBans(String ip, String who, String source, String reason) {
+        PlayerEntry entry = load(ID_TYPE.NAME, ip);
+        Instant now = Instant.now();
+        for (BanEntry ban : entry.bans) {
+            entry.checkBan(ban, now);
+            if (!ban.expired && ban.revokedSource == null)
+                ban.revoke(who, source, reason);
+        }
+        saveEntry(entry);
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+    }
+
+    public static void revokeIPBans(String ip, String who, String source, String reason) {
+        PlayerEntry entry = load(ID_TYPE.IP, ip);
+        Instant now = Instant.now();
+        for (BanEntry ban : entry.bans) {
+            entry.checkBan(ban, now);
+            if (!ban.expired && ban.revokedSource == null)
+                ban.revoke(who, source, reason);
+        }
+        saveEntry(entry);
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+    }
+
+    public static Text getBanText(BanEntry banEntry, Instant now) {
+        if (banEntry != null) {
+            return Text.translatable("multiplayer.disconnect.banned").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
+                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW))).append("\n")
+                    .append(Text.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).formatted(Formatting.YELLOW)));
+        }
+        return null;
     }
 }

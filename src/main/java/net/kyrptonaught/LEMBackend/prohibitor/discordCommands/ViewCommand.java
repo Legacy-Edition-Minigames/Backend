@@ -26,11 +26,9 @@ import net.dv8tion.jda.api.utils.FileUpload;
 import net.kyrptonaught.LEMBackend.FileHelper;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.Actions;
 import net.kyrptonaught.LEMBackend.prohibitor.actions.SkinBanAction;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
-import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.*;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 
 import java.time.Instant;
@@ -145,10 +143,7 @@ public class ViewCommand {
             totalPages++;
             if (currentPage != -999)
                 if (++currentPage == page) {
-                    container.add(TextDisplay.of("### Discord Link"));
-                    container.add(TextDisplay.of("Discord: " + "<@" + playerEntry.discordLink.discordID() + ">"));
-                    container.add(TextDisplay.of("Date Linked: " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(playerEntry.firstSeen)));
-                    container.add(TextDisplay.of("Server: " + playerEntry.discordLink.server()));
+                    buildPunishment(container, Actions.LINK, playerEntry.discordLink);
                     currentPage = -999;
                 }
         }
@@ -157,8 +152,7 @@ public class ViewCommand {
             totalPages++;
             if (currentPage != -999)
                 if (++currentPage == page) {
-                    container.add(TextDisplay.of("### Whitelisted"));
-                    addStamp(container, playerEntry.whitelistStatus);
+                    buildPunishment(container, Actions.WHITELIST, playerEntry.whitelistStatus);
                     currentPage = -999;
                 }
         }
@@ -166,8 +160,7 @@ public class ViewCommand {
             totalPages++;
             if (currentPage != -999)
                 if (++currentPage == page) {
-                    container.add(TextDisplay.of("### Suspicious"));
-                    addStamp(container, playerEntry.sussyStatus);
+                    buildPunishment(container, Actions.SUS, playerEntry.sussyStatus);
                     currentPage = -999;
                 }
         }
@@ -177,10 +170,7 @@ public class ViewCommand {
                 for (BanEntry entry : playerEntry.bans) {
                     if (++currentPage == page) {
                         playerEntry.checkBan(entry, now);
-                        container.add(TextDisplay.of("### Ban"));
-                        addDuration(container, entry);
-                        addStamp(container, entry.banSource);
-                        addRevoked(container, entry.revokedSource);
+                        buildPunishment(container, Actions.BAN, entry);
                         currentPage = -999;
                         break;
                     }
@@ -192,10 +182,7 @@ public class ViewCommand {
                 for (BanEntry entry : playerEntry.mutes) {
                     if (++currentPage == page) {
                         playerEntry.checkBan(entry, now);
-                        container.add(TextDisplay.of("### Mute"));
-                        addDuration(container, entry);
-                        addStamp(container, entry.banSource);
-                        addRevoked(container, entry.revokedSource);
+                        buildPunishment(container, Actions.MUTE, entry);
                         currentPage = -999;
                         break;
                     }
@@ -206,10 +193,7 @@ public class ViewCommand {
             if (currentPage != -999)
                 for (SkinBanEntry entry : playerEntry.skinBans) {
                     if (++currentPage == page) {
-                        container.add(TextDisplay.of("### Skin Ban"));
-                        SkinBanAction.generateSkinRender(entry.skin);
-                        container.add(MediaGallery.of(MediaGalleryItem.fromFile(FileUpload.fromData(ProhibitorModule.getSkinRenderPath(entry.skin))).withDescription(entry.skin)));
-                        addStamp(container, entry.banSource);
+                        buildPunishment(container, Actions.SKINBAN, entry);
                         currentPage = -999;
                         break;
                     }
@@ -220,8 +204,7 @@ public class ViewCommand {
             if (currentPage != -999)
                 for (StampEntry entry : playerEntry.warns) {
                     if (++currentPage == page) {
-                        container.add(TextDisplay.of("### Warn"));
-                        addStamp(container, entry);
+                        buildPunishment(container, Actions.WARN, entry);
                         currentPage = -999;
                         break;
                     }
@@ -232,8 +215,7 @@ public class ViewCommand {
             if (currentPage != -999)
                 for (StampEntry entry : playerEntry.kicks) {
                     if (++currentPage == page) {
-                        container.add(TextDisplay.of("### Kick"));
-                        addStamp(container, entry);
+                        buildPunishment(container, Actions.KICK, entry);
                         currentPage = -999;
                         break;
                     }
@@ -247,6 +229,67 @@ public class ViewCommand {
         ));
 
         return Container.of(container);
+    }
+
+    public static void buildPunishment(List<ContainerChildComponent> container, Actions action, Entry entry) {
+        switch (action) {
+            case BAN -> {
+                container.add(TextDisplay.of("### Ban"));
+                addDuration(container, (BanEntry) entry);
+                addStamp(container, ((BanEntry) entry).banSource);
+                addRevoked(container, ((BanEntry) entry).revokedSource);
+            }
+            case MUTE -> {
+                container.add(TextDisplay.of("### Mute"));
+                addDuration(container, (BanEntry) entry);
+                addStamp(container, ((BanEntry) entry).banSource);
+                addRevoked(container, ((BanEntry) entry).revokedSource);
+            }
+            case SKINBAN -> {
+                container.add(TextDisplay.of("### Skin Ban"));
+                SkinBanAction.generateSkinRender(((SkinBanEntry) entry).skin);
+                container.add(MediaGallery.of(MediaGalleryItem.fromFile(FileUpload.fromData(ProhibitorModule.getSkinRenderPath(((SkinBanEntry) entry).skin))).withDescription(((SkinBanEntry) entry).skin)));
+                addStamp(container, ((SkinBanEntry) entry).banSource);
+            }
+            case WARN -> {
+                container.add(TextDisplay.of("### Warn"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case KICK -> {
+                container.add(TextDisplay.of("### Kick"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case WHITELIST -> {
+                container.add(TextDisplay.of("### Whitelisted"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case SUS -> {
+                container.add(TextDisplay.of("### Suspicious"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case LINK -> {
+                container.add(TextDisplay.of("### Discord Link"));
+                container.add(TextDisplay.of("Discord: " + "<@" + ((DiscordLinkEntry) entry).discordID() + ">"));
+                container.add(TextDisplay.of("Date Linked: " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(((DiscordLinkEntry) entry).dateLinked())));
+                container.add(TextDisplay.of("Server: " + ((DiscordLinkEntry) entry).server()));
+            }
+            case UNBAN -> {
+                container.add(TextDisplay.of("### Un-Ban"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case UNMUTE -> {
+                container.add(TextDisplay.of("### Un-Mute"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case UNWHITELIST -> {
+                container.add(TextDisplay.of("### Un-Whitelist"));
+                addStamp(container, ((StampEntry) entry));
+            }
+            case UNSUS -> {
+                container.add(TextDisplay.of("### Un-SUS"));
+                addStamp(container, ((StampEntry) entry));
+            }
+        }
     }
 
     private static void addStamp(List<ContainerChildComponent> container, StampEntry stamp) {

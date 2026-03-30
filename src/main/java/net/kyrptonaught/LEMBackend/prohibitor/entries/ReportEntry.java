@@ -2,7 +2,7 @@ package net.kyrptonaught.LEMBackend.prohibitor.entries;
 
 import java.time.Instant;
 
-public class ReportEntry {
+public class ReportEntry implements Entry {
     public StampEntry source;
 
     public String link;

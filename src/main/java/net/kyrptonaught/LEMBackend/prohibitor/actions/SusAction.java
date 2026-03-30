@@ -17,10 +17,9 @@ public class SusAction {
         if (entry.sussyStatus == null) {
             entry.sussyStatus = new StampEntry(who, source, Instant.now(), reason).attachEvidence(evidence);
             saveEntry(entry);
-            ProhibitorModule.notifyServer(source, uuid, "sus", Text.translatable("commands.sus.add.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
+            ProhibitorModule.notifyServer(source, Actions.SUS, entry, entry.sussyStatus, Text.empty());
             return true;
         }
-        ProhibitorModule.notifyServer(source, uuid, "sus", Text.translatable("commands.sus.add.failure", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
         return false;
     }
 
@@ -28,6 +27,6 @@ public class SusAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.sussyStatus = null;
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, entry.associatedUUID, "unsus", Text.literal(entry.id_type.name() + " ").append(Text.translatable("commands.sus.remove.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who)));
+        ProhibitorModule.notifyServer(source, Actions.UNSUS, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
     }
 }

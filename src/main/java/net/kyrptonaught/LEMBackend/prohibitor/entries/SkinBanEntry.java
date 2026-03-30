@@ -2,7 +2,7 @@ package net.kyrptonaught.LEMBackend.prohibitor.entries;
 
 import java.time.Instant;
 
-public class SkinBanEntry {
+public class SkinBanEntry implements Entry {
     public StampEntry banSource;
     public String skin;
 

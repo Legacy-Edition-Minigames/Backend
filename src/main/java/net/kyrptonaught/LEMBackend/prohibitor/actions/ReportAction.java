@@ -19,8 +19,9 @@ public class ReportAction {
         String link = LEMBackend.BridgeModule.module.createPlayerReport(name, txt, 365155938497200138L);
 
         PlayerEntry entry = loadUUID(uuid);
-        entry.reports.addFirst(new ReportEntry(link, who, source, reason).addEvidence(evidence));
+        ReportEntry banEntry = new ReportEntry(link, who, source, reason).addEvidence(evidence);
+        entry.reports.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, uuid, "report", Text.translatable("gui.socialInteractions.narration.report", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
+        ProhibitorModule.notifyServer(source, Actions.REPORT, entry, banEntry, Text.translatable("gui.socialInteractions.narration.report", Text.literal(entry.associatedName), reason));
     }
 }

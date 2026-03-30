@@ -11,10 +11,14 @@ import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
 import net.kyrptonaught.LEMBackend.prohibitor.ChatFilter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.MuteAction;
 import net.kyrptonaught.LEMBackend.prohibitor.discordCommands.PersonatusCommand;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
+import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextCodecs;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 
@@ -67,18 +71,19 @@ public class BridgeIn {
         boolean isMuted = obj.get("muted").getAsBoolean();
 
         if (isMuted) {
-            if (ProhibitorModule.canPlayerChat(obj.get("player_uuid").getAsString())) {
-                JsonObject obj2 = new JsonObject();
-                obj2.addProperty("uuid", obj.get("player_uuid").getAsString());
-                obj2.addProperty("action", "unmute");
-                BridgeOut.encodeText(obj2, "reason", Text.translatable("mco.configure.world.subscription.expired"));
-                BridgeOut.sendMessageToAllServers("prohibitor", obj2);
+            PlayerEntry entry = ProhibitorModule.loadUUID(obj.get("player_uuid").getAsString());
+            BanEntry actionEntry = entry.isActiveMute(Instant.now());
+            if (actionEntry == null) {
+                MuteAction.muteExpire(bridge, entry);
                 isMuted = false;
             } else {
                 JsonObject obj2 = new JsonObject();
-                obj2.addProperty("uuid", obj.get("player_uuid").getAsString());
+                obj2.addProperty("type", "prohibitor");
                 obj2.addProperty("action", "still_muted");
-                BridgeOut.sendMessageToAllServers("prohibitor", obj2);
+                obj2.addProperty("uuid", obj.get("player_uuid").getAsString());
+                BridgeOut.encodeText(obj2, "reason", MuteAction.getStillMuteText(actionEntry, Instant.now()));
+
+                BridgeOut.sendMessageToServer(bridge, obj2);
             }
         }
 
@@ -93,12 +98,12 @@ public class BridgeIn {
     }
 
     public static void handleServerLog(String bridge, JsonObject obj) {
-        String msg = FormatToDiscord.escapeFormatting(obj.get("msg").toString().replaceAll("\\\\r\\\\n\"$", "").replaceAll("\\\\n\"$", "").substring(1));
+        String msg = obj.get("msg").toString().replaceAll("\\\\r\\\\n\"$", "").replaceAll("\\\\n\"$", "").substring(1);
         handleServerLog(BridgeModule.servers.get(bridge).logChannelWebhook, msg);
     }
 
     public static void handleServerLog(Webhook webhook, String msg) {
-        msg = msg.replaceAll("<IP>(\\d|.)+</IP>", "IPHIDDEN");
+        msg = FormatToDiscord.escapeFormatting(msg.replaceAll("<IP>(\\d|.)+</IP>", "IPHIDDEN"));
         webhook.sendMessage(">>> " + msg).setUsername("Server").queue();
     }
 

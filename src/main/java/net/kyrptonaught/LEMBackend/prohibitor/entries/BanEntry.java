@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-public class BanEntry {
+public class BanEntry implements Entry {
     public StampEntry banSource;
 
     public boolean permanent;
@@ -64,12 +64,31 @@ public class BanEntry {
         this.expired = true;
     }
 
-    public MutableText getDurationText() {
-        if (permanent) return Text.translatable("punishment.permenant");
-        return Text.translatable("punishment.duration." + ChronoUnit.values()[duration_type].toString().toLowerCase(), duration_time);
+    public MutableText getDurationText(Instant now) {
+        if (permanent) return Text.translatable("team.collision.never");
+
+        long minutes = getRemaining(now);
+        long hours = (minutes / (60)) % 24;
+        long days = minutes / (60 * 24) % 365;
+        long years = minutes / (60 * 24 * 365);
+
+        if (minutes == 0) minutes = 1;
+
+        MutableText text = Text.empty();
+        if (years > 0) text.append(Text.translatableWithFallback("gui.years", "%s year(s)", years));
+        if (days > 0) text.append(Text.translatable("gui.days", years));
+        if (hours > 0) text.append(Text.translatable("gui.hours", years));
+        text.append(Text.translatable("gui.minutes", minutes));
+
+        return text;
     }
 
     public Duration getDuration() {
         return Duration.of(duration_time, ChronoUnit.values()[duration_type]);
+    }
+
+    public long getRemaining(Instant now) {
+        if (permanent) return -1;
+        return now.until(banSource.when.plus(getDuration()), ChronoUnit.MINUTES);
     }
 }

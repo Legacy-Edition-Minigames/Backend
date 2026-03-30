@@ -71,7 +71,7 @@ public class LinkingManager {
         for (Message message : history.getRetrievedHistory()) {
             message.delete().queue();
         }
-        generateDiscordInput(jda, channel);
+        //generateDiscordInput(jda, channel);
     }
 
     public static void generateDiscordInput(JDA jda, long channel) {

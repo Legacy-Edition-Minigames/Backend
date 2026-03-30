@@ -17,10 +17,9 @@ public class WhitelistAction {
         if (entry.whitelistStatus == null) {
             entry.whitelistStatus = new StampEntry(who, source, Instant.now(), reason);
             saveEntry(entry);
-            ProhibitorModule.notifyServer(source, uuid, "whitelist", Text.translatable("commands.whitelist.add.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
+            ProhibitorModule.notifyServer(source, Actions.WHITELIST, entry, entry.whitelistStatus, Text.empty());
             return true;
         }
-        ProhibitorModule.notifyServer(source, uuid, "whitelist", Text.translatable("commands.whitelist.add.failure", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who));
         return false;
     }
 
@@ -28,6 +27,6 @@ public class WhitelistAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.whitelistStatus = null;
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, entry.associatedUUID, "unwhitelist", Text.literal(entry.id_type.name() + " ").append(Text.translatable("commands.whitelist.remove.success", Text.literal(entry.associatedName), reason).append("\nBy: ").append(who)));
+        ProhibitorModule.notifyServer(source, Actions.UNWHITELIST, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
     }
 }
