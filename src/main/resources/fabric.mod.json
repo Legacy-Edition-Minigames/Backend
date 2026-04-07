@@ -19,16 +19,11 @@
       "net.kyrptonaught.LEMBackend.LEMBackend"
     ]
   },
-  "accessWidener": "lembackend.accesswidener",
+  "accessWidener": "lembackend.classtweaker",
   "mixins": [
     {
       "config": "backend.mixins.json",
       "environment": "*"
     }
-  ],
-  "depends": {
-    "fabricloader": ">=0.16.14",
-    "fabric": "*",
-    "java": ">=21"
-  }
+  ]
 }

@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.Optional;
@@ -27,7 +28,7 @@ public class FormatToDiscord {
 
     public static String toDiscord(JDA jda, MinecraftServer server, Component text, boolean escapeFormat) {
         try {
-            text = ComponentUtils.updateForEntity(server.createCommandSourceStack(), text, null, 0);
+            text = ComponentUtils.resolve(ResolutionContext.create(server.createCommandSourceStack()), text, 0);
         } catch (Exception e) {
             e.printStackTrace();
         }

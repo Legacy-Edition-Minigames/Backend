@@ -1,6 +1,6 @@
 import net.fabricmc.loom.task.RemapJarTask
 plugins {
-	id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 	id 'com.gradleup.shadow' version '9.4.1'
 }
@@ -16,39 +16,25 @@ repositories {
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.layered() {
-        officialMojangMappings()
-        parchment("org.parchmentmc.data:parchment-1.21.11:2025.12.20@zip")
-    }
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	//Discord Bridge
-	shadow implementation("net.dv8tion:JDA:6.4.0") { exclude module: 'opus-java' }
+	shadow implementation("net.dv8tion:JDA:6.4.1") { exclude module: 'opus-java' }
 
 	//Javalin
 	shadow implementation("io.javalin:javalin:7.1.0")
 }
 
 loom {
-	accessWidenerPath = file("src/main/resources/lembackend.accesswidener")
+	accessWidenerPath = file("src/main/resources/lembackend.classtweaker")
 }
 
-configurations {
-	// Determines shaded dependencies
-	shade
-	developmentElements {
-		extendsFrom(implementation, namedElements)
-	}
-}
-
+tasks.build.dependsOn(shadowJar)
 shadowJar {
 	minimize()
-	// Store in temporary folder instead of outputting directly
 	destinationDirectory = file("${buildDir}/tmp/allJar")
-	// Only shade dependencies not provided by Minecraft/FAPI/FLoader
-	configurations = [project.configurations.shadow]
 	relocate 'okhttp3', 'net.dv8tion.shaded.okhttp3'
 	relocate 'okio' , 'net.dv8tion.shaded.okio'
 
@@ -59,11 +45,6 @@ shadowJar {
 	from('licenses') {
 		into('licenses')
 	}
-}
-
-remapJar {
-	dependsOn(shadowJar)
-	inputFile = tasks.shadowJar.archiveFile
 }
 
 base {
@@ -79,17 +60,21 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+    it.options.release = 25
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
+    dependsOn(shadowJar)
+    mustRunAfter(shadowJar)
+
 	// Store in temporary folder instead of outputting directly
 	destinationDirectory = file("${buildDir}/tmp/thinJar")
+    inputs.property "archivesName", project.base.archivesName
 	from("LICENSE") {
 		rename { "${it}_${base.archivesName.get()}"}
 	}
