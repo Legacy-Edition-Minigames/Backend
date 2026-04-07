@@ -3,7 +3,7 @@ package net.kyrptonaught.LEMBackend.prohibitor.actions;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -17,7 +17,7 @@ public class SusAction {
         if (entry.sussyStatus == null) {
             entry.sussyStatus = new StampEntry(who, source, Instant.now(), reason).attachEvidence(evidence);
             saveEntry(entry);
-            ProhibitorModule.notifyServer(source, Actions.SUS, entry, entry.sussyStatus, Text.empty());
+            ProhibitorModule.notifyServer(source, Actions.SUS, entry, entry.sussyStatus, Component.empty());
             return true;
         }
         return false;
@@ -27,6 +27,6 @@ public class SusAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.sussyStatus = null;
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNSUS, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNSUS, entry, new StampEntry(who, source, Instant.now(), reason), Component.empty());
     }
 }

@@ -1,7 +1,7 @@
 package net.kyrptonaught.LEMBackend.prohibitor.entries;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -64,8 +64,8 @@ public class BanEntry implements Entry {
         this.expired = true;
     }
 
-    public MutableText getDurationText(Instant now) {
-        if (permanent) return Text.translatable("team.collision.never");
+    public MutableComponent getDurationText(Instant now) {
+        if (permanent) return Component.translatable("team.collision.never");
 
         long minutes = getRemaining(now);
         long hours = (minutes / (60)) % 24;
@@ -74,11 +74,11 @@ public class BanEntry implements Entry {
 
         if (minutes == 0) minutes = 1;
 
-        MutableText text = Text.empty();
-        if (years > 0) text.append(Text.translatableWithFallback("gui.years", "%s year(s)", years));
-        if (days > 0) text.append(Text.translatable("gui.days", years));
-        if (hours > 0) text.append(Text.translatable("gui.hours", years));
-        text.append(Text.translatable("gui.minutes", minutes));
+        MutableComponent text = Component.empty();
+        if (years > 0) text.append(Component.translatableWithFallback("gui.years", "%s year(s)", years));
+        if (days > 0) text.append(Component.translatable("gui.days", years));
+        if (hours > 0) text.append(Component.translatable("gui.hours", years));
+        text.append(Component.translatable("gui.minutes", minutes));
 
         return text;
     }

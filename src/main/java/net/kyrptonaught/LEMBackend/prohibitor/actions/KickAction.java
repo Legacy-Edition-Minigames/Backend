@@ -3,8 +3,8 @@ package net.kyrptonaught.LEMBackend.prohibitor.actions;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -20,10 +20,10 @@ public class KickAction {
         ProhibitorModule.notifyServer(source, Actions.KICK, entry, banEntry, getKickText(banEntry));
     }
 
-    public static Text getKickText(StampEntry banEntry) {
+    public static Component getKickText(StampEntry banEntry) {
         if (banEntry != null) {
-            return Text.translatable("multiplayer.disconnect.kicked").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.why).formatted(Formatting.YELLOW)));
+            return Component.translatable("multiplayer.disconnect.kicked").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.why).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

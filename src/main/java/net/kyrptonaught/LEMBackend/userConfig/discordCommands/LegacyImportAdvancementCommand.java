@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.modals.Modal;
 import net.kyrptonaught.LEMBackend.FileHelper;
 import net.kyrptonaught.LEMBackend.LEMBackend;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,8 +40,8 @@ public class LegacyImportAdvancementCommand {
         List<Message.Attachment> attachments = event.getValue("file").getAsAttachmentList();
 
 
-        Path save = LEMBackend.minecraftServer.getSavePath(WorldSavePath.ROOT).resolve("advancements.zip");
-        Path out = LEMBackend.minecraftServer.getSavePath(WorldSavePath.ADVANCEMENTS);
+        Path save = LEMBackend.minecraftServer.getWorldPath(LevelResource.ROOT).resolve("advancements.zip");
+        Path out = LEMBackend.minecraftServer.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR);
 
         if (!attachments.isEmpty()) {
             FileHelper.download(attachments.get(0).getUrl(), save);

@@ -3,8 +3,8 @@ package net.kyrptonaught.LEMBackend.prohibitor.actions;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -21,10 +21,10 @@ public class WarnAction {
         saveEntry(entry);
     }
 
-    public static Text getBanText(StampEntry actionEntry) {
+    public static Component getBanText(StampEntry actionEntry) {
         if (actionEntry != null) {
-            return Text.translatable("mco.warning").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(actionEntry.why).formatted(Formatting.YELLOW)));
+            return Component.translatable("mco.warning").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(actionEntry.why).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

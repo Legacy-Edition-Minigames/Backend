@@ -4,7 +4,7 @@ import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.ReportEntry;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.loadUUID;
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.saveEntry;
@@ -22,6 +22,6 @@ public class ReportAction {
         ReportEntry banEntry = new ReportEntry(link, who, source, reason).addEvidence(evidence);
         entry.reports.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.REPORT, entry, banEntry, Text.translatable("gui.socialInteractions.narration.report", Text.literal(entry.associatedName), reason));
+        ProhibitorModule.notifyServer(source, Actions.REPORT, entry, banEntry, Component.translatable("gui.socialInteractions.narration.report", Component.literal(entry.associatedName), reason));
     }
 }

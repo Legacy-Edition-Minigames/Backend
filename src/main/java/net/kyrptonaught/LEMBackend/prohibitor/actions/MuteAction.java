@@ -4,8 +4,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -39,32 +39,32 @@ public class MuteAction {
                 ban.revoke(who, source, reason);
         }
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNMUTE, entry, new StampEntry(who, source, now, reason), Text.translatableWithFallback("prohibitor.mute.unmuted", "You have been unmuted"));
+        ProhibitorModule.notifyServer(source, Actions.UNMUTE, entry, new StampEntry(who, source, now, reason), Component.translatableWithFallback("prohibitor.mute.unmuted", "You have been unmuted"));
     }
 
     public static void muteExpire(String source, PlayerEntry entry) {
         ProhibitorModule.notifyServer(source, Actions.UNMUTE, entry, new StampEntry("Expired", source, Instant.now(), "Expired"), getUnMuteText());
     }
 
-    public static Text getMuteText(BanEntry banEntry, Instant now) {
+    public static Component getMuteText(BanEntry banEntry, Instant now) {
         if (banEntry != null) {
-            return Text.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").formatted(Formatting.BOLD, Formatting.RED).append("\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW))).append("\n")
-                    .append(Text.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).formatted(Formatting.YELLOW)));
+            return Component.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }
 
-    public static Text getStillMuteText(BanEntry banEntry, Instant now) {
+    public static Component getStillMuteText(BanEntry banEntry, Instant now) {
         if (banEntry != null) {
-            return Text.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").formatted(Formatting.RED).append("\n")
-                    .append(Text.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).formatted(Formatting.YELLOW)));
+            return Component.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").withStyle(ChatFormatting.RED).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }
 
-    public static Text getUnMuteText() {
-        return Text.translatableWithFallback("prohibitor.mute.unmuted", "You have been unmuted").formatted(Formatting.YELLOW).append("\n")
-                .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.translatable("mco.configure.world.subscription.expired").formatted(Formatting.YELLOW)));
+    public static Component getUnMuteText() {
+        return Component.translatableWithFallback("prohibitor.mute.unmuted", "You have been unmuted").withStyle(ChatFormatting.YELLOW).append("\n")
+                .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.translatable("mco.configure.world.subscription.expired").withStyle(ChatFormatting.YELLOW)));
     }
 }

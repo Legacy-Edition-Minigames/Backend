@@ -3,7 +3,7 @@ package net.kyrptonaught.LEMBackend.prohibitor.actions;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -17,7 +17,7 @@ public class WhitelistAction {
         if (entry.whitelistStatus == null) {
             entry.whitelistStatus = new StampEntry(who, source, Instant.now(), reason);
             saveEntry(entry);
-            ProhibitorModule.notifyServer(source, Actions.WHITELIST, entry, entry.whitelistStatus, Text.empty());
+            ProhibitorModule.notifyServer(source, Actions.WHITELIST, entry, entry.whitelistStatus, Component.empty());
             return true;
         }
         return false;
@@ -27,6 +27,6 @@ public class WhitelistAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.whitelistStatus = null;
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNWHITELIST, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNWHITELIST, entry, new StampEntry(who, source, Instant.now(), reason), Component.empty());
     }
 }

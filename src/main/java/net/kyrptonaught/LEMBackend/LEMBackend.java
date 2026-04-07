@@ -14,8 +14,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorRouter;
 import net.kyrptonaught.LEMBackend.resourcer.ResourcerRouter;
 import net.kyrptonaught.LEMBackend.serverReplay.ServerReplayRouter;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
 
 import java.nio.file.Path;
 
@@ -109,10 +109,10 @@ public class LEMBackend implements ModInitializer {
     @Override
     public void onInitialize() {
         start();
-        ServerLifecycleEvents.SERVER_STARTED.addPhaseOrdering(Identifier.of("lembackend", "start"), Event.DEFAULT_PHASE);
-        ServerLifecycleEvents.SERVER_STARTED.register(Identifier.of("lembackend", "start"), server -> LEMBackend.minecraftServer = server);
+        ServerLifecycleEvents.SERVER_STARTED.addPhaseOrdering(Identifier.fromNamespaceAndPath("lembackend", "start"), Event.DEFAULT_PHASE);
+        ServerLifecycleEvents.SERVER_STARTED.register(Identifier.fromNamespaceAndPath("lembackend", "start"), server -> LEMBackend.minecraftServer = server);
 
-        ServerLifecycleEvents.SERVER_STOPPED.addPhaseOrdering(Event.DEFAULT_PHASE, Identifier.of("lembackend", "stop"));
-        ServerLifecycleEvents.SERVER_STOPPED.register(Identifier.of("lembackend", "stop"), server -> LEMBackend.shutdown());
+        ServerLifecycleEvents.SERVER_STOPPED.addPhaseOrdering(Event.DEFAULT_PHASE, Identifier.fromNamespaceAndPath("lembackend", "stop"));
+        ServerLifecycleEvents.SERVER_STOPPED.register(Identifier.fromNamespaceAndPath("lembackend", "stop"), server -> LEMBackend.shutdown());
     }
 }

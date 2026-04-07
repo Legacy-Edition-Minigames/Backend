@@ -1,7 +1,7 @@
 package net.kyrptonaught.LEMBackend.config;
 
 import com.google.gson.*;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -62,7 +62,7 @@ public class ConfigManager {
 
     private static class IdentifierSerializer implements JsonDeserializer<Identifier>, JsonSerializer<Identifier> {
         public Identifier deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-            return Identifier.of(jsonElement.getAsString());
+            return Identifier.parse(jsonElement.getAsString());
         }
 
         public JsonElement serialize(Identifier identifier, Type type, JsonSerializationContext jsonSerializationContext) {

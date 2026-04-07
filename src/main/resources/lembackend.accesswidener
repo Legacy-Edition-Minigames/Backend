@@ -1,4 +1,4 @@
 accessWidener v2 named
 
 #Hashing
-accessible method net/minecraft/util/NetworkUtils hash (Ljava/nio/file/Path;Lcom/google/common/hash/HashFunction;)Lcom/google/common/hash/HashCode;
+accessible method net/minecraft/util/HttpUtil hashFile (Ljava/nio/file/Path;Lcom/google/common/hash/HashFunction;)Lcom/google/common/hash/HashCode;

@@ -11,8 +11,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.SkinBanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.LenientJsonParser;
 
 import java.time.Instant;
@@ -45,11 +45,11 @@ public class SkinBanAction {
         PlayerEntry entry = loadUUID(uuid);
         entry.skinBans.clear();
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNSKINBAN, entry, new StampEntry(who, source, Instant.now(), reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNSKINBAN, entry, new StampEntry(who, source, Instant.now(), reason), Component.empty());
     }
 
     public static String getPlayerSkin(String uuid) {
-        if (LEMBackend.minecraftServer.getApiServices().sessionService() instanceof YggdrasilMinecraftSessionService sessionService) {
+        if (LEMBackend.minecraftServer.services().sessionService() instanceof YggdrasilMinecraftSessionService sessionService) {
             ProfileResult profile = sessionService.fetchProfile(UndashedUuid.fromString(uuid), true);
             if (profile == null) return null;
             Property prop = Iterables.getFirst(profile.profile().properties().get("textures"), null);
@@ -65,10 +65,10 @@ public class SkinBanAction {
         FileHelper.download(api, ProhibitorModule.getSkinRenderPath(url));
     }
 
-    public static Text getBanText(SkinBanEntry banEntry) {
+    public static Component getBanText(SkinBanEntry banEntry) {
         if (banEntry != null) {
-            return Text.translatable("gui.banned.skin.title").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW)));
+            return Component.translatable("gui.banned.skin.title").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

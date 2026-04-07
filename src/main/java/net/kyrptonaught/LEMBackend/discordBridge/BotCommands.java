@@ -26,8 +26,8 @@ import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToDiscord;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigDiscordCommands;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.TextCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -124,7 +124,7 @@ public class BotCommands {
     }
 
     public static void gameStartInfo(JDA jda, long channelID, JsonObject obj) {
-        String mapName = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("map_name")).result().get(), true).replaceAll("!", "");
+        String mapName = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, obj.get("map_name")).result().get(), true).replaceAll("!", "");
         List<ContainerChildComponent> container = new ArrayList<>();
         container.add(Section.of(Button.secondary("empty", obj.get("game_id").getAsString()).asDisabled(), TextDisplay.of("# " + mapName), TextDisplay.of("-# " + obj.get("map_size").getAsString())));
         //container.add(TextDisplay.ofFormat("# %s\n-# %s", mapName, obj.get("map_size").getAsString()));
@@ -138,8 +138,8 @@ public class BotCommands {
         } else {
             StringBuilder str = new StringBuilder("### Changed Rules:");
             for (JsonElement entry : rules.asList()) {
-                String key = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("key")).result().get(), true);
-                String value = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, TextCodecs.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("value")).result().get(), true);
+                String key = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("key")).result().get(), true);
+                String value = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, entry.getAsJsonObject().get("value")).result().get(), true);
                 str.append("\n- **" + key + "**: " + value);
             }
             container.add(TextDisplay.of(str.toString()));

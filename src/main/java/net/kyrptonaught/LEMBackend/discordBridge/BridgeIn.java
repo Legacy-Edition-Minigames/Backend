@@ -15,8 +15,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.actions.MuteAction;
 import net.kyrptonaught.LEMBackend.prohibitor.discordCommands.PersonatusCommand;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -34,13 +34,13 @@ public class BridgeIn {
         } else if (obj.get("type").getAsString().equals("server_log")) {
             handleServerLog(bridge, obj);
         } else if (obj.get("type").getAsString().equals("game")) {
-            Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
+            Component text = ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
             String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
             sendEmbed(jda, servers.get(bridge).chatChannelID, null, msg, obj.get("color").getAsInt());
         } else if (obj.get("type").getAsString().equals("log")) {
             WebhookSender.log(BridgeModule.adminLogWebhook, obj.get("server_name").getAsString(), obj.get("msg").getAsString());
         } else if (obj.get("type").getAsString().equals("log_text")) {
-            Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
+            Component text = ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
             String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
             if (obj.get("ping").getAsBoolean())
                 WebhookSender.logMention(BridgeModule.adminLogWebhook, obj.get("server_name").getAsString(), msg, config.moderatorRoleID, true);
@@ -70,7 +70,7 @@ public class BridgeIn {
         Map<String, ServerInfo> servers = BridgeModule.servers;
         DiscordBridgeConfig config = BridgeModule.config;
 
-        Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
+        Component text = ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
         String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
 
         boolean isInappropriate = obj.get("inappropriate").getAsBoolean();
@@ -135,7 +135,7 @@ public class BridgeIn {
         WebhookSender.log(BridgeModule.adminLogWebhook, source, message);
     }
 
-    public static void sendLogMessage(String source, Text message) {
+    public static void sendLogMessage(String source, Component message) {
         sendLogMessage(source, FormatToDiscord.toDiscord(BridgeModule.jda, LEMBackend.minecraftServer, message));
     }
 }

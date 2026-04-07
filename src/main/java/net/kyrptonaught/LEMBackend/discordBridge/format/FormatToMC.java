@@ -5,8 +5,8 @@ import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.sticker.StickerItem;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.*;
 import net.minecraft.util.LenientJsonParser;
 
 import java.net.URI;
@@ -16,7 +16,7 @@ import java.util.List;
 
 public class FormatToMC {
 
-    public static Text parseMessage(Message discordMessage, MutableText prefix, boolean isAdmin) {
+    public static Component parseMessage(Message discordMessage, MutableComponent prefix, boolean isAdmin) {
         if (isAdmin && discordMessage.getContentRaw().startsWith("$PARSE="))
             return parseAdminTextJson(discordMessage, prefix);
 
@@ -35,7 +35,7 @@ public class FormatToMC {
             return null;
         }
 
-        MutableText message = Text.literal("").append(prefix).append(getAuthor(discordMessage));
+        MutableComponent message = Component.literal("").append(prefix).append(getAuthor(discordMessage));
 
         for (String str : discordMessage.getContentDisplay().split(" ")) {
             message.append(parseText(str, replacementURLs));
@@ -47,7 +47,7 @@ public class FormatToMC {
             Iterator<String> urlIterator = replacementURLs.keySet().iterator();
             while (urlIterator.hasNext()) {
                 String str = urlIterator.next();
-                message.append(Text.literal(str + (urlIterator.hasNext() ? ", " : "")).setStyle(styleURL(replacementURLs.get(str))));
+                message.append(Component.literal(str + (urlIterator.hasNext() ? ", " : "")).setStyle(styleURL(replacementURLs.get(str))));
             }
             message.append("}");
         }
@@ -55,12 +55,12 @@ public class FormatToMC {
         return message;
     }
 
-    private static Text parseAdminTextJson(Message discordMessage, MutableText prefix) {
-        MutableText message = Text.literal("").append(prefix).append(getAuthor(discordMessage));
+    private static Component parseAdminTextJson(Message discordMessage, MutableComponent prefix) {
+        MutableComponent message = Component.literal("").append(prefix).append(getAuthor(discordMessage));
 
-        Text parsed = null;
+        Component parsed = null;
         try {
-            parsed = TextCodecs.CODEC.parse(JsonOps.INSTANCE, LenientJsonParser.parse(discordMessage.getContentRaw().replaceFirst("\\$PARSE=", ""))).getOrThrow();
+            parsed = ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, LenientJsonParser.parse(discordMessage.getContentRaw().replaceFirst("\\$PARSE=", ""))).getOrThrow();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -70,34 +70,34 @@ public class FormatToMC {
         return message;
     }
 
-    private static Text getAuthor(Message discordMessage) {
+    private static Component getAuthor(Message discordMessage) {
         int color = discordMessage.getMember() != null ? discordMessage.getMember().getColorRaw() : 0xffffff;
         String author = discordMessage.getMember() != null ? discordMessage.getMember().getEffectiveName() : discordMessage.getAuthor().getEffectiveName();
 
-        return Text.literal("<" + author + "> ").styled(style -> style.withColor(color));
+        return Component.literal("<" + author + "> ").withStyle(style -> style.withColor(color));
     }
 
-    private static void format(List<Text> texts, String message) {
+    private static void format(List<Component> texts, String message) {
         int underBegin = message.indexOf("__");
         int underEnd = message.indexOf("__", underBegin + 1);
         if (underBegin > -1 && underEnd > -1) {
-            texts.add(Text.literal(message.substring(0, underBegin)));
-            texts.add(Text.literal(message.substring(underBegin + 2, underEnd)).styled(style -> style.withUnderline(true)));
-            texts.add(Text.literal(message.substring(underEnd + 2)));
-        } else texts.add(Text.literal(message));
+            texts.add(Component.literal(message.substring(0, underBegin)));
+            texts.add(Component.literal(message.substring(underBegin + 2, underEnd)).withStyle(style -> style.withUnderlined(true)));
+            texts.add(Component.literal(message.substring(underEnd + 2)));
+        } else texts.add(Component.literal(message));
     }
 
-    private static Text parseText(String text, HashMap<String, String> replacementURLs) {
+    private static Component parseText(String text, HashMap<String, String> replacementURLs) {
         if (replacementURLs.containsKey(text))
-            return Text.literal(text + " ").setStyle(styleURL(replacementURLs.remove(text)));
+            return Component.literal(text + " ").setStyle(styleURL(replacementURLs.remove(text)));
 
         if (replacementURLs.containsKey(text + "/"))
-            return Text.literal(text + " ").setStyle(styleURL(replacementURLs.remove(text + "/")));
+            return Component.literal(text + " ").setStyle(styleURL(replacementURLs.remove(text + "/")));
 
-        return Text.literal(text + " ");
+        return Component.literal(text + " ");
     }
 
     private static Style styleURL(String url) {
-        return Style.EMPTY.withFormatting(Formatting.UNDERLINE, Formatting.BLUE).withClickEvent(new ClickEvent.OpenUrl(URI.create(url)));
+        return Style.EMPTY.applyFormats(ChatFormatting.UNDERLINE, ChatFormatting.BLUE).withClickEvent(new ClickEvent.OpenUrl(URI.create(url)));
     }
 }

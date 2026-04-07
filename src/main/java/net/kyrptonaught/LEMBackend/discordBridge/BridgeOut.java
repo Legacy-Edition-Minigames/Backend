@@ -7,9 +7,9 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.kyrptonaught.LEMBackend.discordBridge.format.FormatToMC;
 import net.kyrptonaught.LEMBackend.prohibitor.ChatFilter;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 
 public class BridgeOut {
 
@@ -20,20 +20,20 @@ public class BridgeOut {
 
         if (isAllowedChannel(event.getChannel().getName(), event.getChannel().getIdLong())) {
             if (event.getMessage().getReferencedMessage() != null) {
-                Text message = FormatToMC.parseMessage(event.getMessage().getReferencedMessage(), Text.literal("    ┌──── ").formatted(Formatting.GRAY), false);
+                Component message = FormatToMC.parseMessage(event.getMessage().getReferencedMessage(), Component.literal("    ┌──── ").withStyle(ChatFormatting.GRAY), false);
                 sendMessageToServer(event.getChannel().getName(), message);
             }
 
             Role adminMessageRole = event.getGuild().getRoleById(BridgeModule.config.adminMessageRoleID);
             boolean admin = event.getMember().getRoles().contains(adminMessageRole);
 
-            Text message = FormatToMC.parseMessage(event.getMessage(), Text.literal("[Discord] ").formatted(Formatting.BLUE), admin);
+            Component message = FormatToMC.parseMessage(event.getMessage(), Component.literal("[Discord] ").withStyle(ChatFormatting.BLUE), admin);
             if (message != null)
                 sendMessageToServer(event.getChannel().getName(), message);
         }
     }
 
-    public static void sendMessageToServer(String bridge, Text message) {
+    public static void sendMessageToServer(String bridge, Component message) {
         JsonObject obj = new JsonObject();
         obj.addProperty("type", "chat");
         encodeText(obj, "msg", message);
@@ -59,7 +59,7 @@ public class BridgeOut {
         return BridgeModule.servers.containsKey(channel) && BridgeModule.servers.get(channel).chatChannelID == channelID;
     }
 
-    public static void encodeText(JsonObject obj, String name, Text text) {
-        obj.add(name, TextCodecs.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow());
+    public static void encodeText(JsonObject obj, String name, Component text) {
+        obj.add(name, ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow());
     }
 }

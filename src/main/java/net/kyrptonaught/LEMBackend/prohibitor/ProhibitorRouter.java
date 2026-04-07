@@ -11,8 +11,8 @@ import io.javalin.http.Context;
 import net.kyrptonaught.LEMBackend.ModuleRouter;
 import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.LenientJsonParser;
-import net.minecraft.util.dynamic.Codecs;
 
 import java.util.Base64;
 
@@ -53,7 +53,7 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
         String whitelistStatus = ctx.pathParam("whiteliststatus");
         JsonObject obj = ctx.bodyAsClass(JsonObject.class);
 
-        GameProfile profile = Codecs.GAME_PROFILE_CODEC.parse(JsonOps.INSTANCE, obj.get("profile")).result().get();
+        GameProfile profile = ExtraCodecs.AUTHLIB_GAME_PROFILE.parse(JsonOps.INSTANCE, obj.get("profile")).result().get();
         String ip = obj.get("ip").getAsString();
 
         String skin = null;

@@ -11,14 +11,14 @@ import net.kyrptonaught.LEMBackend.IO;
 import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
 import net.minecraft.SharedConstants;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Style;
-import net.minecraft.text.TextVisitFactory;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Language;
-import net.minecraft.util.NetworkUtils;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.HttpUtil;
+import net.minecraft.util.Mth;
+import net.minecraft.util.StringDecomposer;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -35,7 +35,7 @@ public class ResourcerModule extends Module {
 
     @Override
     protected void load() {
-        generateLobbyMusicPack(SharedConstants.getGameVersion().name());
+        generateLobbyMusicPack(SharedConstants.getCurrentVersion().name());
     }
 
     public String getLang(String version, String rpVersion, String lang) {
@@ -71,7 +71,7 @@ public class ResourcerModule extends Module {
         try {
             String str = pack.get("addon_id").getAsString().replace('/', '_').replace(':', '_');
             Path file = cacheDownload(pack.get("url").getAsString(), Path.of("resource packs").resolve(str + "(" + pack.get("version").getAsString() + ").zip"));
-            return NetworkUtils.hash(file, Hashing.sha1()).toString();
+            return HttpUtil.hashFile(file, Hashing.sha1()).toString();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -100,38 +100,38 @@ public class ResourcerModule extends Module {
     public void injectTranslations() {
         JsonObject obj = LEMBackend.gson.fromJson(IO.getAlt("https://api.github.com/repos/kyrptonaught/Minigame-Resources/releases"), JsonArray.class).get(0).getAsJsonObject();
 
-        String version = SharedConstants.getGameVersion().name();
+        String version = SharedConstants.getCurrentVersion().name();
         String rpVersion = obj.get("tag_name").getAsString();
 
         HashMap<String, String> builder = new HashMap<>();
 
         try (InputStream in = URI.create(IO.getApiUrl("resourcer/lang/" + version + "/" + rpVersion + "/en_us")).toURL().openStream()) {
-            Language.load(in, builder::put);
+            Language.loadFromJson(in, builder::put);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         final ImmutableMap<String, String> map = ImmutableMap.copyOf(builder);
-        Language.setInstance(new Language() {
+        Language.inject(new Language() {
 
             @Override
-            public String get(String key, String fallback) {
+            public String getOrDefault(String key, String fallback) {
                 return map.getOrDefault(key, fallback);
             }
 
             @Override
-            public boolean hasTranslation(String key) {
+            public boolean has(String key) {
                 return map.containsKey(key);
             }
 
             @Override
-            public boolean isRightToLeft() {
+            public boolean isDefaultRightToLeft() {
                 return false;
             }
 
             @Override
-            public OrderedText reorder(StringVisitable text) {
-                return visitor -> text.visit((style, string) -> TextVisitFactory.visitFormatted(string, style, visitor) ? Optional.empty() : StringVisitable.TERMINATE_VISIT, Style.EMPTY).isPresent();
+            public FormattedCharSequence getVisualOrder(FormattedText text) {
+                return visitor -> text.visit((style, string) -> StringDecomposer.iterateFormatted(string, style, visitor) ? Optional.empty() : FormattedText.STOP_ITERATION, Style.EMPTY).isPresent();
             }
         });
     }
@@ -189,12 +189,12 @@ public class ResourcerModule extends Module {
 
 
         LinkedHashMap<Identifier, Integer> songs = new LinkedHashMap<>();
-        songs.put(Identifier.of("heirloom", "delay"), 20);
+        songs.put(Identifier.fromNamespaceAndPath("heirloom", "delay"), 20);
 
         JsonArray arr = obj.getAsJsonObject("music.game").getAsJsonArray("sounds");
         for (JsonElement element : arr) {
             int duration = hashMusicSong(element.getAsJsonObject().get("name").getAsString(), version, baseURL);
-            songs.put(Identifier.of(ID, element.getAsJsonObject().get("name").getAsString().replaceAll("/", ".")), duration);
+            songs.put(Identifier.fromNamespaceAndPath(ID, element.getAsJsonObject().get("name").getAsString().replaceAll("/", ".")), duration);
         }
 
         object.add("songs", LEMBackend.gson.toJsonTree(songs));
@@ -206,7 +206,7 @@ public class ResourcerModule extends Module {
     private static int hashMusicSong(String asset, String version, String baseURL) {
         Path file = Path.of("music packs").resolve(version).resolve("ogg").resolve(asset.replaceAll("/", "_") + ".ogg");
         file = cacheDownload(baseURL + "/sounds/" + asset + ".ogg", file);
-        return MathHelper.ceil(calculateDuration(file) / 1000) + 2;
+        return Mth.ceil(calculateDuration(file) / 1000) + 2;
     }
 
     private static double calculateDuration(Path ogg) {

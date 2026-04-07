@@ -5,8 +5,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.entries.BanEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.ID_TYPE;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.PlayerEntry;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.StampEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
 
@@ -61,7 +61,7 @@ public class BanAction {
                 ban.revoke(who, source, reason);
         }
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Component.empty());
     }
 
     public static void revokeNAMEBans(String ip, String who, String source, String reason) {
@@ -73,7 +73,7 @@ public class BanAction {
                 ban.revoke(who, source, reason);
         }
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Component.empty());
     }
 
     public static void revokeIPBans(String ip, String who, String source, String reason) {
@@ -85,14 +85,14 @@ public class BanAction {
                 ban.revoke(who, source, reason);
         }
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Text.empty());
+        ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Component.empty());
     }
 
-    public static Text getBanText(BanEntry banEntry, Instant now) {
+    public static Component getBanText(BanEntry banEntry, Instant now) {
         if (banEntry != null) {
-            return Text.translatable("multiplayer.disconnect.banned").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW))).append("\n")
-                    .append(Text.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).formatted(Formatting.YELLOW)));
+            return Component.translatable("multiplayer.disconnect.banned").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

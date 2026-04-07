@@ -1,14 +1,14 @@
 package net.kyrptonaught.LEMBackend.mixin;
 
-import net.minecraft.network.ClientConnection;
+import net.minecraft.network.Connection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(ClientConnection.class)
-public class ClientConnectionMixin {
+@Mixin(Connection.class)
+public class ConnectionMixin {
 
-    @Redirect(method = "getAddressAsString", at = @At(value = "INVOKE", target = "Ljava/lang/Object;toString()Ljava/lang/String;"))
+    @Redirect(method = "getLoggableAddress", at = @At(value = "INVOKE", target = "Ljava/lang/Object;toString()Ljava/lang/String;"))
     private static String hideIP(Object instance) {
         return "<IP>" + instance + "</IP>";
     }

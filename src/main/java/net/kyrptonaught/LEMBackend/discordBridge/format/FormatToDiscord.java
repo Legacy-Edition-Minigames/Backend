@@ -2,9 +2,9 @@ package net.kyrptonaught.LEMBackend.discordBridge.format;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
 
 import java.util.Optional;
 
@@ -21,13 +21,13 @@ public class FormatToDiscord {
         return text;
     }
 
-    public static String toDiscord(JDA jda, MinecraftServer server, Text text) {
+    public static String toDiscord(JDA jda, MinecraftServer server, Component text) {
         return toDiscord(jda, server, text, false);
     }
 
-    public static String toDiscord(JDA jda, MinecraftServer server, Text text, boolean escapeFormat) {
+    public static String toDiscord(JDA jda, MinecraftServer server, Component text, boolean escapeFormat) {
         try {
-            text = Texts.parse(server.getCommandSource(), text, null, 0);
+            text = ComponentUtils.updateForEntity(server.createCommandSourceStack(), text, null, 0);
         } catch (Exception e) {
             e.printStackTrace();
         }

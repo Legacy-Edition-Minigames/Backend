@@ -19,8 +19,8 @@ import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
 import net.kyrptonaught.LEMBackend.prohibitor.discordCommands.ViewCommand;
 import net.kyrptonaught.LEMBackend.prohibitor.entries.*;
 import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.nio.file.Path;
@@ -43,7 +43,7 @@ public class ProhibitorModule extends Module {
         PlayerEntry ipEntry = load(ID_TYPE.IP, ip);
         PlayerEntry nameEntry = load(ID_TYPE.NAME, name);
 
-        Text banStatus = canPlayerJoin(uuidEntry, ipEntry, nameEntry, now, whitelistStatus);
+        Component banStatus = canPlayerJoin(uuidEntry, ipEntry, nameEntry, now, whitelistStatus);
         response.addProperty("isBanned", banStatus != null);
         if (banStatus != null) BridgeOut.encodeText(response, "banMessage", banStatus);
 
@@ -54,7 +54,7 @@ public class ProhibitorModule extends Module {
             response.addProperty("muteDuration", muteEntry.getRemaining(now));
         }
 
-        Text skinStatus = checkPlayerSkinBans(uuidEntry, skin);
+        Component skinStatus = checkPlayerSkinBans(uuidEntry, skin);
         response.addProperty("isSkinBanned", skinStatus != null);
         if (skinStatus != null) BridgeOut.encodeText(response, "skinMessage", skinStatus);
 
@@ -66,14 +66,14 @@ public class ProhibitorModule extends Module {
         return response;
     }
 
-    private static Text canPlayerJoin(PlayerEntry uuidEntry, PlayerEntry ipEntry, PlayerEntry nameEntry, Instant now, String whitelistStatus) {
-        Text result = checkPlayerEntryBans(uuidEntry, whitelistStatus, now);
+    private static Component canPlayerJoin(PlayerEntry uuidEntry, PlayerEntry ipEntry, PlayerEntry nameEntry, Instant now, String whitelistStatus) {
+        Component result = checkPlayerEntryBans(uuidEntry, whitelistStatus, now);
         if (result != null) return result;
 
-        Text result2 = checkPlayerEntryBans(ipEntry, whitelistStatus, now);
+        Component result2 = checkPlayerEntryBans(ipEntry, whitelistStatus, now);
         if (result2 != null) return result2;
 
-        Text result3 = checkPlayerEntryBans(nameEntry, whitelistStatus, now);
+        Component result3 = checkPlayerEntryBans(nameEntry, whitelistStatus, now);
         if (result3 != null) return result3;
 
 
@@ -121,16 +121,16 @@ public class ProhibitorModule extends Module {
     }
 
 
-    private static Text checkPlayerSkinBans(PlayerEntry entry, String skin) {
+    private static Component checkPlayerSkinBans(PlayerEntry entry, String skin) {
         SkinBanEntry banEntry = entry.isActiveSkinBan(skin);
         if (banEntry != null) {
-            return Text.translatable("gui.banned.skin.title").formatted(Formatting.BOLD, Formatting.RED).append("\n\n")
-                    .append(Text.translatableWithFallback("punishment.reason", "Reason: %s", Text.literal(banEntry.banSource.why).formatted(Formatting.YELLOW)));
+            return Component.translatable("gui.banned.skin.title").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }
 
-    private static Text checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
+    private static Component checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
         BanEntry banEntry = entry.isActiveBan(now);
         if (banEntry != null) {
             return BanAction.getBanText(banEntry, now);
@@ -138,13 +138,14 @@ public class ProhibitorModule extends Module {
 
         if (entry.id_type == ID_TYPE.UUID) {
             if (whitelistStatus.equals(WhitelistStatus.WHITELIST.name()))
-                if (entry.whitelistStatus == null) return Text.translatable("multiplayer.status.cannot_connect").append("\n").append(Text.translatable("multiplayer.disconnect.not_whitelisted"));
+                if (entry.whitelistStatus == null) return Component.translatable("multiplayer.status.cannot_connect").append("\n").append(Component.translatable("multiplayer.disconnect.not_whitelisted"));
 
             if (whitelistStatus.equals(WhitelistStatus.DISCORD.name()))
-                if (entry.discordLink == null) return Text.translatable("multiplayer.status.cannot_connect").append("\n").append(Text.translatable("prohibitor.discordlink.required"));
+                if (entry.discordLink == null) return Component.translatable("multiplayer.status.cannot_connect").append("\n").append(Component.translatable("prohibitor.discordlink.required"));
 
             if (whitelistStatus.equals(WhitelistStatus.PATREONS.name()))
-                if (LEMBackend.BridgeModule.module.getPatreonTier(entry.discordLink.discordID()) == PatreonTier.NONE) return Text.translatable("multiplayer.status.cannot_connect").append("\n").append(Text.translatable("prohibitor.patreon.required"));
+                if (LEMBackend.BridgeModule.module.getPatreonTier(entry.discordLink.discordID()) == PatreonTier.NONE)
+                    return Component.translatable("multiplayer.status.cannot_connect").append("\n").append(Component.translatable("prohibitor.patreon.required"));
         }
         return null;
     }
@@ -211,11 +212,11 @@ public class ProhibitorModule extends Module {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("SKINRENDERS").resolve(url.substring(38) + ".png");
     }
 
-    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Text msg) {
+    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Component msg) {
         notifyServer(source, action, entry, banEntry, msg, null);
     }
 
-    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Text msg, JsonObject custom) {
+    public static void notifyServer(String source, Actions action, PlayerEntry entry, Entry banEntry, Component msg, JsonObject custom) {
         JsonObject obj = new JsonObject();
         obj.addProperty("uuid", entry.associatedUUID);
         obj.addProperty("action", action.name());
