@@ -58,6 +58,10 @@ public class BridgeIn {
             BotCommands.gameStartInfo(jda, servers.get(bridge).chatChannelID, obj);
         } else if (obj.get("type").getAsString().equals("identifier")) {
             servers.get(bridge).serverName = obj.get("name").getAsString();
+            JsonObject obj2 = new JsonObject();
+            obj2.addProperty("type", "chat_blocklist");
+            obj2.add("list", ChatFilter.getBlocklist());
+            BridgeOut.sendMessageToServer(bridge, obj2);
         }
     }
 
@@ -68,8 +72,14 @@ public class BridgeIn {
 
         Text text = TextCodecs.CODEC.parse(JsonOps.INSTANCE, obj.get("msg")).result().get();
         String msg = FormatToDiscord.toDiscord(jda, LEMBackend.minecraftServer, text, true);
-        boolean isMuted = obj.get("muted").getAsBoolean();
 
+        boolean isInappropriate = obj.get("inappropriate").getAsBoolean();
+        if (isInappropriate) {
+            ChatFilter.handleChatMessage(msg, obj.get("display_name").getAsString(), obj.get("player_uuid").getAsString(), bridge);
+            return;
+        }
+
+        boolean isMuted = obj.get("muted").getAsBoolean();
         if (isMuted) {
             PlayerEntry entry = ProhibitorModule.loadUUID(obj.get("player_uuid").getAsString());
             BanEntry actionEntry = entry.isActiveMute(Instant.now());
@@ -87,11 +97,7 @@ public class BridgeIn {
             }
         }
 
-        if (!ChatFilter.handleChatMessage(msg, obj.get("display_name").getAsString(), obj.get("player_uuid").getAsString(), bridge)) return;
-
         if (!isMuted) {
-            obj.addProperty("type", "chat_approved");
-            BridgeOut.sendMessageToServer(bridge, obj);
             String url = FormatToDiscord.getUserHeadURL(config.playerSkinURL, obj.get("display_name").getAsString(), obj.get("player_uuid").getAsString());
             WebhookSender.sendMessage(servers.get(bridge).chatChannelWebhook, obj.get("display_name").getAsString(), url, msg);
         }
