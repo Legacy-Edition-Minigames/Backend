@@ -104,7 +104,11 @@ public class BridgeIn {
     }
 
     public static void handleServerLog(String bridge, JsonObject obj) {
-        String msg = obj.get("msg").toString().replaceAll("\\\\r\\\\n\"$", "").replaceAll("\\\\n\"$", "").substring(1);
+        String msg = obj.get("msg").toString()
+                .replaceAll("\\\\r\\\\n\"$", "")
+                .replaceAll("\\\\n\"$", "")
+                .replaceAll("]: \\\\tat ", "]:    at ")
+                .substring(1);
         handleServerLog(BridgeModule.servers.get(bridge).logChannelWebhook, msg);
     }
 
