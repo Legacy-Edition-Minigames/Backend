@@ -11,6 +11,7 @@ public final class StampEntry implements Entry {
     public final String where;
     public Instant when;
     public final String why;
+    public boolean acknowledged;
     public final List<String> evidence = new ArrayList<>();
     public String punishment_id;
 
@@ -31,6 +32,10 @@ public final class StampEntry implements Entry {
         this.when = now;
         genHash();
         return this;
+    }
+
+    public void markAcknowledged() {
+        acknowledged = true;
     }
 
     public void genHash() {

@@ -9,6 +9,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.*;
 
@@ -42,14 +45,14 @@ public class BanAction {
         BanEntry banEntry = BanEntry.PermaBan(reason, who, source).updateWhen(now).addEvidence(evidence);
         entry.bans.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getBanText(banEntry, now));
+        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getText(banEntry, now));
     }
 
     public static void tempBan(PlayerEntry entry, String who, String source, String reason, int duration_time, byte duration_type, Instant now, String... evidence) {
         BanEntry banEntry = BanEntry.TempBan(reason, duration_time, duration_type, who, source).updateWhen(now).addEvidence(evidence);
         entry.bans.addFirst(banEntry);
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getBanText(banEntry, now));
+        ProhibitorModule.notifyServer(source, Actions.BAN, entry, banEntry, getText(banEntry, now));
     }
 
     public static void revokeUUIDBans(String uuid, String who, String source, String reason) {
@@ -88,11 +91,21 @@ public class BanAction {
         ProhibitorModule.notifyServer(source, Actions.UNBAN, entry, new StampEntry(who, source, now, reason), Component.empty());
     }
 
-    public static Component getBanText(BanEntry banEntry, Instant now) {
-        if (banEntry != null) {
+    public static Component getText(BanEntry entry, Instant now) {
+        if (entry != null) {
             return Component.translatable("multiplayer.disconnect.banned").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
-                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
-                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", entry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
+        }
+        return null;
+    }
+
+    public static Component getTextSimple(BanEntry entry, Instant now) {
+        if (entry != null) {
+            String when = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(entry.banSource.when);
+            return Component.translatableWithFallback("prohibitor.punishment.ban", "Ban").withStyle(ChatFormatting.RED).append(" - ").append(when).append("\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", entry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

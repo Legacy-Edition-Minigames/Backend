@@ -1,5 +1,6 @@
 package net.kyrptonaught.LEMBackend.discordBridge;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import net.dv8tion.jda.api.entities.MessageType;
@@ -61,5 +62,9 @@ public class BridgeOut {
 
     public static void encodeText(JsonObject obj, String name, Component text) {
         obj.add(name, ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow());
+    }
+
+    public static JsonElement encodeText(Component text) {
+        return ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow();
     }
 }

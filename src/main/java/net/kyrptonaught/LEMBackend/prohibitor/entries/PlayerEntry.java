@@ -1,10 +1,11 @@
 package net.kyrptonaught.LEMBackend.prohibitor.entries;
 
+import com.google.gson.JsonElement;
+import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
+import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
+
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class PlayerEntry {
     public ID_TYPE id_type;
@@ -84,5 +85,23 @@ public class PlayerEntry {
     public void addWarn(StampEntry entry) {
         for (StampEntry ban : warns) if (ban.punishment_id.equals(entry.punishment_id)) return;
         warns.add(entry);
+    }
+
+    public void markAllAck() {
+        for (BanEntry entry : bans) entry.banSource.markAcknowledged();
+        for (BanEntry entry : mutes) entry.banSource.markAcknowledged();
+        for (StampEntry entry : warns) entry.markAcknowledged();
+        for (StampEntry entry : kicks) entry.markAcknowledged();
+        for (SkinBanEntry entry : skinBans) entry.banSource.markAcknowledged();
+    }
+
+    public void getUnAcknowledged(HashMap<String, JsonElement> map) {
+        Instant now = Instant.now();
+
+        for (BanEntry entry : bans) if (!entry.banSource.acknowledged) map.put(entry.banSource.punishment_id, BridgeOut.encodeText(BanAction.getTextSimple(entry, now)));
+        for (BanEntry entry : mutes) if (!entry.banSource.acknowledged) map.put(entry.banSource.punishment_id, BridgeOut.encodeText(MuteAction.getTextSimple(entry, now)));
+        for (StampEntry entry : warns) if (!entry.acknowledged) map.put(entry.punishment_id, BridgeOut.encodeText(WarnAction.getTextSimple(entry)));
+        for (StampEntry entry : kicks) if (!entry.acknowledged) map.put(entry.punishment_id, BridgeOut.encodeText(KickAction.getTextSimple(entry)));
+        for (SkinBanEntry entry : skinBans) if (!entry.banSource.acknowledged) map.put(entry.banSource.punishment_id, BridgeOut.encodeText(SkinBanAction.getTextSimple(entry)));
     }
 }

@@ -11,7 +11,7 @@ import net.kyrptonaught.LEMBackend.config.ConfigManager;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeRouter;
 import net.kyrptonaught.LEMBackend.keyValueStorage.KeyValueRouter;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorRouter;
-import net.kyrptonaught.LEMBackend.resourcer.ResourcerRouter;
+import net.kyrptonaught.LEMBackend.resourcer.Resourcer;
 import net.kyrptonaught.LEMBackend.serverReplay.ServerReplayRouter;
 import net.kyrptonaught.LEMBackend.userConfig.UserConfigRouter;
 import net.minecraft.resources.Identifier;
@@ -28,7 +28,6 @@ public class LEMBackend implements ModInitializer {
     public static UserConfigRouter UserConfigModule;
     public static KeyValueRouter KeyValueModule;
     public static BridgeRouter BridgeModule;
-    public static ResourcerRouter ResourcerModule;
     public static ServerReplayRouter ServerReplayModule;
 
     public static net.kyrptonaught.LEMBackend.legacy.userConfig.UserConfigRouter LegacyUserConfigModule;
@@ -42,7 +41,6 @@ public class LEMBackend implements ModInitializer {
         UserConfigModule = new UserConfigRouter();
         KeyValueModule = new KeyValueRouter();
         BridgeModule = new BridgeRouter();
-        ResourcerModule = new ResourcerRouter();
         ServerReplayModule = new ServerReplayRouter();
 
         LegacyUserConfigModule = new net.kyrptonaught.LEMBackend.legacy.userConfig.UserConfigRouter();
@@ -57,13 +55,12 @@ public class LEMBackend implements ModInitializer {
                     load(config.routes, UserConfigModule);
                     load(config.routes, KeyValueModule);
                     load(config.routes, BridgeModule);
-                    load(config.routes, ResourcerModule);
                     load(config.routes, ServerReplayModule);
                     load(config.routes, LegacyUserConfigModule);
                 })
                 .start(getConfig().port);
 
-        ResourcerModule.module.injectTranslations();
+        Resourcer.injectTranslations();
 
         System.out.println("LEMBackend server started");
     }
@@ -77,7 +74,6 @@ public class LEMBackend implements ModInitializer {
         save(UserConfigModule);
         save(KeyValueModule);
         save(BridgeModule);
-        save(ResourcerModule);
         save(ServerReplayModule);
         save(LegacyUserConfigModule);
 

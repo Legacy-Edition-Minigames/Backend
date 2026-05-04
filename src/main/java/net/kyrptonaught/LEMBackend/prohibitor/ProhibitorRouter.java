@@ -60,7 +60,7 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
         Property prop = Iterables.getFirst(profile.properties().get("textures"), null);
         if (prop != null) skin = LenientJsonParser.parse(new String(Base64.getDecoder().decode(prop.value()))).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
 
-        JsonObject response = ProhibitorModule.getJoinStatus(profile.id().toString(), profile.name(), ip, skin, whitelistStatus);
+        JsonObject response = ProhibitorModule.getJoinStatus(profile.id().toString(), profile.name(), ip, skin, whitelistStatus, true);
         ctx.result(response.toString());
     }
 

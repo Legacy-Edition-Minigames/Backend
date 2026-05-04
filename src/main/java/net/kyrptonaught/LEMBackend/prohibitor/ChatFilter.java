@@ -1,6 +1,8 @@
 package net.kyrptonaught.LEMBackend.prohibitor;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.WebhookSender;
@@ -54,38 +56,11 @@ public class ChatFilter {
         return arr;
     }
 
-    public static void genWords() {
-        blocklist.add("fag");
-        blocklist.add("faggot");
-        blocklist.add("f@g");
-        blocklist.add("f@ggot");
-        blocklist.add("faqqot");
-
-        blocklist.add("nig");
-        blocklist.add("nibba");
-        blocklist.add("nigga");
-        blocklist.add("nigger");
-        blocklist.add("nibber");
-        blocklist.add("negger");
-        blocklist.add("n1gger");
-        blocklist.add("niqqa");
-        blocklist.add("niqqer");
-        blocklist.add("n1gga");
-        blocklist.add("nigg@");
-        blocklist.add("n1gga");
-        blocklist.add("negga");
-        blocklist.add("nigguh");
-        blocklist.add("nga");
-
-        blocklist.add("spick");
-        blocklist.add("beaner");
-        blocklist.add("spacker");
-        blocklist.add("siegheil");
-        blocklist.add("putitio");
-        blocklist.add("munting");
-        blocklist.add("blackpeople");
-        blocklist.add("jew");
-        blocklist.add("chink");
-        blocklist.add("chigger");
+    public static void load(JsonObject obj) {
+        if (obj != null && !obj.isEmpty()) {
+            for (JsonElement s : obj.getAsJsonArray()) {
+                blocklist.add(s.getAsString());
+            }
+        }
     }
 }

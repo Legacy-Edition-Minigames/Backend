@@ -55,7 +55,7 @@ public class BanListImportCommand {
 
             String type = data[10];
 
-            ProhibitorModule.getJoinStatus(uuid, name, ip, "", "NONE");
+            ProhibitorModule.getJoinStatus(uuid, name, ip, "", "NONE", false);
 
             PlayerEntry uuidEntry = ProhibitorModule.load(ID_TYPE.UUID, uuid);
             PlayerEntry ipEntry = ProhibitorModule.load(ID_TYPE.IP, ip);

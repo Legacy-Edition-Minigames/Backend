@@ -31,9 +31,15 @@ loom {
 	accessWidenerPath = file("src/main/resources/lembackend.classtweaker")
 }
 
-tasks.build.dependsOn(shadowJar)
+configurations {
+    shadow
+    compileOnly.extendsFrom(shadow)
+}
+
 shadowJar {
-	minimize()
+    configurations = [project.configurations.shadow]
+    setProperty("zip64", true)
+    setProperty("minimizeJar", true)
 	destinationDirectory = file("${buildDir}/tmp/allJar")
 	relocate 'okhttp3', 'net.dv8tion.shaded.okhttp3'
 	relocate 'okio' , 'net.dv8tion.shaded.okio'
@@ -68,14 +74,20 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+tasks.build.dependsOn(tasks.shadowJar)
+tasks.build.dependsOn(shadowJar)
 jar {
     dependsOn(shadowJar)
     mustRunAfter(shadowJar)
 
-	// Store in temporary folder instead of outputting directly
-	destinationDirectory = file("${buildDir}/tmp/thinJar")
-    inputs.property "archivesName", project.base.archivesName
-	from("LICENSE") {
-		rename { "${it}_${base.archivesName.get()}"}
-	}
+    inputs.property "projectName", project.name
+
+    from("LICENSE") {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(zipTree(shadowJar.archiveFile)) {
+        exclude "META-INF/MANIFEST.MF"
+    }
 }

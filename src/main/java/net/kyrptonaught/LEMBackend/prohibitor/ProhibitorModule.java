@@ -8,9 +8,8 @@ import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
-import net.kyrptonaught.LEMBackend.FileHelper;
+import net.kyrptonaught.LEMBackend.*;
 import net.kyrptonaught.LEMBackend.IO;
-import net.kyrptonaught.LEMBackend.LEMBackend;
 import net.kyrptonaught.LEMBackend.Module;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeOut;
@@ -26,15 +25,15 @@ import org.apache.commons.lang3.RandomStringUtils;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class ProhibitorModule extends Module {
     public ProhibitorModule() {
         super("prohibitor");
-        ChatFilter.genWords();
     }
 
-    public static JsonObject getJoinStatus(String uuid, String name, String ip, String skin, String whitelistStatus) {
+    public static JsonObject getJoinStatus(String uuid, String name, String ip, String skin, String whitelistStatus, boolean markAck) {
         JsonObject response = new JsonObject();
 
         Instant now = Instant.now();
@@ -50,13 +49,25 @@ public class ProhibitorModule extends Module {
         BanEntry muteEntry = uuidEntry.isActiveMute(now);
         response.addProperty("isMuted", muteEntry != null);
         if (muteEntry != null) {
-            BridgeOut.encodeText(response, "muteMessage", MuteAction.getMuteText(muteEntry, now));
+            BridgeOut.encodeText(response, "muteMessage", MuteAction.getText(muteEntry, now));
             response.addProperty("muteDuration", muteEntry.getRemaining(now));
         }
 
         Component skinStatus = checkPlayerSkinBans(uuidEntry, skin);
         response.addProperty("isSkinBanned", skinStatus != null);
         if (skinStatus != null) BridgeOut.encodeText(response, "skinMessage", skinStatus);
+
+        HashMap<String, JsonElement> unAckMap = new HashMap<>();
+        nameEntry.getUnAcknowledged(unAckMap);
+        ipEntry.getUnAcknowledged(unAckMap);
+        uuidEntry.getUnAcknowledged(unAckMap);
+        response.add("unAck", JsonHelper.toJsonArray(unAckMap.values()));
+
+        if (markAck) {
+            uuidEntry.markAllAck();
+            ipEntry.markAllAck();
+            nameEntry.markAllAck();
+        }
 
         saveEntry(uuidEntry);
         saveEntry(ipEntry);
@@ -75,7 +86,6 @@ public class ProhibitorModule extends Module {
 
         Component result3 = checkPlayerEntryBans(nameEntry, whitelistStatus, now);
         if (result3 != null) return result3;
-
 
         if (uuidEntry.firstSeen == null) uuidEntry.firstSeen = now;
         uuidEntry.associatedName = nameEntry.id;
@@ -133,7 +143,7 @@ public class ProhibitorModule extends Module {
     private static Component checkPlayerEntryBans(PlayerEntry entry, String whitelistStatus, Instant now) {
         BanEntry banEntry = entry.isActiveBan(now);
         if (banEntry != null) {
-            return BanAction.getBanText(banEntry, now);
+            return BanAction.getText(banEntry, now);
         }
 
         if (entry.id_type == ID_TYPE.UUID) {
@@ -187,6 +197,7 @@ public class ProhibitorModule extends Module {
         FileHelper.createDir(savePath.resolve("EVIDENCE"));
         FileHelper.createDir(savePath.resolve("SKINRENDERS"));
         LinkingManager.load(readFileJson(gson, "discordLinks.json", JsonObject.class));
+        ChatFilter.load(readFileJson(gson, "chatfilter.json", JsonObject.class));
     }
 
     @Override
@@ -195,6 +206,7 @@ public class ProhibitorModule extends Module {
         FileHelper.createDir(savePath.resolve("EVIDENCE"));
         FileHelper.createDir(savePath.resolve("SKINRENDERS"));
         writeFileJson(gson, "discordLinks.json", LinkingManager.getSave());
+        writeFileJson(gson, "chatfilter.json", ChatFilter.getBlocklist());
     }
 
     public static String downloadEvidence(String url, String uuid, String fileExtension) {
@@ -206,7 +218,6 @@ public class ProhibitorModule extends Module {
     public static Path getEvidiencePath(String file) {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("EVIDENCE").resolve(file);
     }
-
 
     public static Path getSkinRenderPath(String url) {
         return LEMBackend.ProhibitorModule.module.savePath.resolve("SKINRENDERS").resolve(url.substring(38) + ".png");

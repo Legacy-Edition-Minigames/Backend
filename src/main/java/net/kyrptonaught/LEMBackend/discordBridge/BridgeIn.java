@@ -91,7 +91,7 @@ public class BridgeIn {
                 obj2.addProperty("type", "prohibitor");
                 obj2.addProperty("action", "still_muted");
                 obj2.addProperty("uuid", obj.get("player_uuid").getAsString());
-                BridgeOut.encodeText(obj2, "reason", MuteAction.getStillMuteText(actionEntry, Instant.now()));
+                BridgeOut.encodeText(obj2, "reason", MuteAction.getTextStillMuted(actionEntry, Instant.now()));
 
                 BridgeOut.sendMessageToServer(bridge, obj2);
             }

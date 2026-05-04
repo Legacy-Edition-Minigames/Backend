@@ -16,6 +16,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.LenientJsonParser;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.Base64;
 
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.loadUUID;
@@ -37,7 +40,7 @@ public class SkinBanAction {
         generateSkinRender(skin);
 
         saveEntry(entry);
-        ProhibitorModule.notifyServer(source, Actions.SKINBAN, entry, actionEntry, getBanText(actionEntry));
+        ProhibitorModule.notifyServer(source, Actions.SKINBAN, entry, actionEntry, getText(actionEntry));
     }
 
 
@@ -65,10 +68,19 @@ public class SkinBanAction {
         FileHelper.download(api, ProhibitorModule.getSkinRenderPath(url));
     }
 
-    public static Component getBanText(SkinBanEntry banEntry) {
-        if (banEntry != null) {
+    public static Component getText(SkinBanEntry entry) {
+        if (entry != null) {
             return Component.translatable("gui.banned.skin.title").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n\n")
-                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW)));
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW)));
+        }
+        return null;
+    }
+
+    public static Component getTextSimple(SkinBanEntry entry) {
+        if (entry != null) {
+            String when = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(entry.banSource.when);
+            return Component.translatableWithFallback("prohibitor.punishment.skinban", "SkinBan").withStyle(ChatFormatting.RED).append(" - ").append(when).append("\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }

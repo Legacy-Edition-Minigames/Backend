@@ -8,6 +8,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.loadUUID;
 import static net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule.saveEntry;
@@ -18,7 +21,7 @@ public class MuteAction {
         PlayerEntry entry = loadUUID(uuid);
         BanEntry banEntry = BanEntry.PermaBan(reason, who, source).addEvidence(evidence);
         entry.mutes.addFirst(banEntry);
-        ProhibitorModule.notifyServer(source, Actions.MUTE, entry, banEntry, getMuteText(banEntry, Instant.now()));
+        ProhibitorModule.notifyServer(source, Actions.MUTE, entry, banEntry, getText(banEntry, Instant.now()));
         saveEntry(entry);
     }
 
@@ -26,7 +29,7 @@ public class MuteAction {
         PlayerEntry entry = loadUUID(uuid);
         BanEntry banEntry = BanEntry.TempBan(reason, duration_time, duration_type, who, source).addEvidence(evidence);
         entry.mutes.addFirst(banEntry);
-        ProhibitorModule.notifyServer(source, Actions.MUTE, entry, banEntry, getMuteText(banEntry, Instant.now()));
+        ProhibitorModule.notifyServer(source, Actions.MUTE, entry, banEntry, getText(banEntry, Instant.now()));
         saveEntry(entry);
     }
 
@@ -43,27 +46,37 @@ public class MuteAction {
     }
 
     public static void muteExpire(String source, PlayerEntry entry) {
-        ProhibitorModule.notifyServer(source, Actions.UNMUTE, entry, new StampEntry("Expired", source, Instant.now(), "Expired"), getUnMuteText());
+        ProhibitorModule.notifyServer(source, Actions.UNMUTE, entry, new StampEntry("Expired", source, Instant.now(), "Expired"), getTextUnMute());
     }
 
-    public static Component getMuteText(BanEntry banEntry, Instant now) {
-        if (banEntry != null) {
+    public static Component getText(BanEntry entry, Instant now) {
+        if (entry != null) {
             return Component.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").withStyle(ChatFormatting.BOLD, ChatFormatting.RED).append("\n")
-                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(banEntry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
-                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", entry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }
 
-    public static Component getStillMuteText(BanEntry banEntry, Instant now) {
-        if (banEntry != null) {
+    public static Component getTextSimple(BanEntry entry, Instant now) {
+        if (entry != null) {
+            String when = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault()).format(entry.banSource.when);
+            return Component.translatableWithFallback("prohibitor.punishment.mute", "Mute").withStyle(ChatFormatting.RED).append(" - ").append(when).append("\n")
+                    .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.literal(entry.banSource.why).withStyle(ChatFormatting.YELLOW))).append("\n")
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", entry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
+        }
+        return null;
+    }
+
+    public static Component getTextStillMuted(BanEntry entry, Instant now) {
+        if (entry != null) {
             return Component.translatableWithFallback("prohibitor.mute.cannotsent", "You are muted, your messages will not be sent").withStyle(ChatFormatting.RED).append("\n")
-                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", banEntry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
+                    .append(Component.translatableWithFallback("punishment.expires", "Expires in: %s", entry.getDurationText(now).withStyle(ChatFormatting.YELLOW)));
         }
         return null;
     }
 
-    public static Component getUnMuteText() {
+    public static Component getTextUnMute() {
         return Component.translatableWithFallback("prohibitor.mute.unmuted", "You have been unmuted").withStyle(ChatFormatting.YELLOW).append("\n")
                 .append(Component.translatableWithFallback("punishment.reason", "Reason: %s", Component.translatable("mco.configure.world.subscription.expired").withStyle(ChatFormatting.YELLOW)));
     }
