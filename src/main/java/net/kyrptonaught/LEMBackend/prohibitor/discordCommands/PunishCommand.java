@@ -23,6 +23,7 @@ import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.kyrptonaught.LEMBackend.discordBridge.BridgeModule;
+import net.kyrptonaught.LEMBackend.prohibitor.Configs;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorDiscordCommands;
 import net.kyrptonaught.LEMBackend.prohibitor.ProhibitorModule;
 import net.kyrptonaught.LEMBackend.prohibitor.actions.*;
@@ -31,6 +32,7 @@ import net.kyrptonaught.LEMBackend.prohibitor.linking.LinkingManager;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -203,7 +205,7 @@ public class PunishCommand {
             container.add(Label.of(desc + ": ", TextInput.create("duration_time", TextInputStyle.SHORT).setPlaceholder("Duration").setRequired(true).build()));
         }
 
-        container.add(Label.of("Reason: ", TextInput.create("reason", TextInputStyle.PARAGRAPH).setPlaceholder("Reason").setValue(getReasonPreset(key[3])).setRequired(true).build()));
+        container.add(Label.of("Reason: ", TextInput.create("reason", TextInputStyle.PARAGRAPH).setPlaceholder("Reason").setValue(punishmentPresets().get(key[3])).setRequired(true).build()));
 
         container.add(Label.of("Evidence: ", AttachmentUpload.create("evidence").setRequired(false).setMaxValues(10).build()));
 
@@ -306,22 +308,6 @@ public class PunishCommand {
         return out.toString();
     }
 
-    private static String getReasonPreset(String preset) {
-        return switch (preset) {
-            case "idle" -> "Idle/AFK";
-            case "slur" -> "Slur usage is strictly prohibited on this server";
-            case "toxic" -> "Toxicity";
-            case "nsfw" -> "NSFW/Inapropriate Content";
-            case "spam" -> "Spamming";
-            case "harassment" -> "Harassment";
-            case "racist" -> "Racism/Facism/Descrimination/Political";
-            case "comp" -> "Compromised Account";
-            case "cheat" -> "Cheating";
-            case "rot" -> "Rot";
-            default -> null;
-        };
-    }
-
     private static StringSelectMenu.Builder durationSelect(String key, String playerLookupType, String reasonPreset) {
         return StringSelectMenu.create(ID + "ban_duration")
                 .addOption("Indefinite", "---" + playerLookupType + "---" + "indefinite" + "---" + reasonPreset + "---")
@@ -335,25 +321,23 @@ public class PunishCommand {
     }
 
     private static StringSelectMenu.Builder reasonSelect(String key, String playerLookupType, String durationType) {
-        return StringSelectMenu.create(ID + "reason_preset")
-                .addOption("Other", "---" + playerLookupType + "---" + durationType + "---" + "other" + "---")
-                .addOption("Idle/AFK", "---" + playerLookupType + "---" + durationType + "---" + "idle" + "---")
-                .addOption("Slur", "---" + playerLookupType + "---" + durationType + "---" + "slur" + "---")
-                .addOption("Toxicity", "---" + playerLookupType + "---" + durationType + "---" + "toxic" + "---")
-                .addOption("NSFW Content", "---" + playerLookupType + "---" + durationType + "---" + "nsfw" + "---")
-                .addOption("Spamming", "---" + playerLookupType + "---" + durationType + "---" + "spam" + "---")
-                .addOption("Harassment", "---" + playerLookupType + "---" + durationType + "---" + "harassment" + "---")
-                .addOption("Racism/Facism/Descrimination/Political", "---" + playerLookupType + "---" + durationType + "---" + "racist" + "---")
-                .addOption("Compromised Account", "---" + playerLookupType + "---" + durationType + "---" + "comp" + "---")
-                .addOption("Cheating", "---" + playerLookupType + "---" + durationType + "---" + "cheat" + "---")
-                .addOption("Rot", "---" + playerLookupType + "---" + durationType + "---" + "rot" + "---")
-                .setPlaceholder("Reason")
-                .setDefaultValues(key);
+        StringSelectMenu.Builder stringSelect = StringSelectMenu.create(ID + "reason_preset").setPlaceholder("Reason");
+
+        for (String presetKey : punishmentPresets().keySet()) {
+            stringSelect.addOption(punishmentPresets().get(presetKey), "---" + playerLookupType + "---" + durationType + "---" + presetKey + "---");
+        }
+
+        stringSelect.setDefaultValues(key);
+        return stringSelect;
     }
 
     public static EntitySelectMenu.Builder discordSelect(String playerID) {
         EntitySelectMenu.Builder builder = EntitySelectMenu.create("player_id", EntitySelectMenu.SelectTarget.USER);
         if (playerID != null) builder.setDefaultValues(EntitySelectMenu.DefaultValue.from(BridgeModule.jda.getUserById(playerID)));
         return builder;
+    }
+
+    private static HashMap<String, String> punishmentPresets() {
+        return Configs.punishmentPresets;
     }
 }

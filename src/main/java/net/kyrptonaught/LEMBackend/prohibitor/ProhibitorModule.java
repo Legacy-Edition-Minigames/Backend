@@ -197,8 +197,10 @@ public class ProhibitorModule extends Module {
         FileHelper.createDir(savePath.resolve("EVIDENCE"));
         FileHelper.createDir(savePath.resolve("SKINRENDERS"));
         LinkingManager.load(readFileJson(gson, "discordLinks.json", JsonObject.class));
-        ChatFilter.load(readFileJson(gson, "chatfilter.json", JsonObject.class));
+        Configs.loadChatFilter();
+        Configs.loadPunishmentPresets();
     }
+
 
     @Override
     public void save(Gson gson) {
@@ -206,7 +208,6 @@ public class ProhibitorModule extends Module {
         FileHelper.createDir(savePath.resolve("EVIDENCE"));
         FileHelper.createDir(savePath.resolve("SKINRENDERS"));
         writeFileJson(gson, "discordLinks.json", LinkingManager.getSave());
-        writeFileJson(gson, "chatfilter.json", ChatFilter.getBlocklist());
     }
 
     public static String downloadEvidence(String url, String uuid, String fileExtension) {

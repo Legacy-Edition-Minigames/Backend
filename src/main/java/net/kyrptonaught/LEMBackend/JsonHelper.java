@@ -12,4 +12,10 @@ public class JsonHelper {
         for (JsonElement element : list) arr.add(element);
         return arr;
     }
+
+    public static JsonArray toJsonArrayString(Collection<String> list) {
+        JsonArray arr = new JsonArray(list.size());
+        for (String element : list) arr.add(element);
+        return arr;
+    }
 }

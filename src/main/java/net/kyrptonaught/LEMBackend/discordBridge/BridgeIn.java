@@ -58,10 +58,6 @@ public class BridgeIn {
             BotCommands.gameStartInfo(jda, servers.get(bridge).chatChannelID, obj);
         } else if (obj.get("type").getAsString().equals("identifier")) {
             servers.get(bridge).serverName = obj.get("name").getAsString();
-            JsonObject obj2 = new JsonObject();
-            obj2.addProperty("type", "chat_blocklist");
-            obj2.add("list", ChatFilter.getBlocklist());
-            BridgeOut.sendMessageToServer(bridge, obj2);
         }
     }
 

@@ -41,6 +41,8 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
         route(routes, HTTP.POST, "/v1/{secret}/prohibitor/whitelist/remove/{uuid}", this::unwhitelistPlayer);
         route(routes, HTTP.POST, "/v1/{secret}/prohibitor/mute/tick", this::tickMutes);
 
+        route(routes, HTTP.GET, "/v1/{secret}/prohibitor/chatfilter/get", this::getChatfilter);
+
         route(routes, HTTP.POST, "/v1/{secret}/link/start/{linkid}/{mcuuid}/{server}", this::startLink);
 
         route(routes, HTTP.POST, "/v1/{secret}/prohibitor/sus/add/{uuid}", this::susPlayer);
@@ -62,6 +64,10 @@ public class ProhibitorRouter extends ModuleRouter<ProhibitorModule> {
 
         JsonObject response = ProhibitorModule.getJoinStatus(profile.id().toString(), profile.name(), ip, skin, whitelistStatus, true);
         ctx.result(response.toString());
+    }
+
+    private void getChatfilter(Context ctx) {
+        ctx.result(ChatFilter.json().toString());
     }
 
     private void tickMutes(Context ctx) {
