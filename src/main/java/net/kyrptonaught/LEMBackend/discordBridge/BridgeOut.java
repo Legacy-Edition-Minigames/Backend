@@ -15,23 +15,21 @@ import net.minecraft.network.chat.ComponentSerialization;
 public class BridgeOut {
 
     public static void onDiscordMessage(MessageReceivedEvent event) {
-        if (event == null || !shouldRespondToMessage(event)) return;
+        if (event == null || !shouldRespondToMessage(event) || !isAllowedChannel(event.getChannel().getName(), event.getChannel().getIdLong())) return;
 
-        if (!ChatFilter.handleDiscordMessage(event)) return;
+        Role adminMessageRole = event.getGuild().getRoleById(BridgeModule.config.adminMessageRoleID);
+        boolean admin = event.getMember().getRoles().contains(adminMessageRole);
 
-        if (isAllowedChannel(event.getChannel().getName(), event.getChannel().getIdLong())) {
-            if (event.getMessage().getReferencedMessage() != null) {
-                Component message = FormatToMC.parseMessage(event.getMessage().getReferencedMessage(), Component.literal("    ┌──── ").withStyle(ChatFormatting.GRAY), false);
-                sendMessageToServer(event.getChannel().getName(), message);
-            }
+        if (!admin && !ChatFilter.handleDiscordMessage(event)) return;
 
-            Role adminMessageRole = event.getGuild().getRoleById(BridgeModule.config.adminMessageRoleID);
-            boolean admin = event.getMember().getRoles().contains(adminMessageRole);
-
-            Component message = FormatToMC.parseMessage(event.getMessage(), Component.literal("[Discord] ").withStyle(ChatFormatting.BLUE), admin);
-            if (message != null)
-                sendMessageToServer(event.getChannel().getName(), message);
+        if (event.getMessage().getReferencedMessage() != null) {
+            Component message = FormatToMC.parseMessage(event.getMessage().getReferencedMessage(), Component.literal("    ┌──── ").withStyle(ChatFormatting.GRAY), false);
+            sendMessageToServer(event.getChannel().getName(), message);
         }
+
+        Component message = FormatToMC.parseMessage(event.getMessage(), Component.literal("[Discord] ").withStyle(ChatFormatting.BLUE), admin);
+        if (message != null)
+            sendMessageToServer(event.getChannel().getName(), message);
     }
 
     public static void sendMessageToServer(String bridge, Component message) {

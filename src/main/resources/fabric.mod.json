@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "lembackend",
-  "version": "2.3.2-26.1.2",
+  "version": "2.3.3-26.1.2",
   "name": "LEMBackend",
   "description": "LEM Backend",
   "authors": [
